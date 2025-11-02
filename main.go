@@ -693,7 +693,7 @@ func printThickSeparator() {
 func printHeader(title string) {
 	fmt.Println()
 	printThickSeparator()
-	fmt.Printf(ColorBold+ColorBrightMagenta+"  ✦ %s ✦"+ColorReset+"\n", title)
+	fmt.Printf(ColorBold+"  %s"+ColorReset+"\n", title)
 	printThickSeparator()
 	fmt.Println()
 }
@@ -705,23 +705,23 @@ func printSubHeader(title string) {
 }
 
 func printSuccess(message string) {
-	fmt.Printf(ColorBrightGreen+"  ✓"+ColorReset+" "+ColorGreen+"%s"+ColorReset+"\n", message)
+	fmt.Printf(ColorGreen+"  ✓"+ColorReset+" %s\n", message)
 }
 
 func printError(message string) {
-	fmt.Printf(ColorBrightRed+"  ✗"+ColorReset+" "+ColorRed+"%s"+ColorReset+"\n", message)
+	fmt.Printf(ColorRed+"  ✗"+ColorReset+" %s\n", message)
 }
 
 func printWarning(message string) {
-	fmt.Printf(ColorBrightYellow+"  ⚠"+ColorReset+" "+ColorYellow+"%s"+ColorReset+"\n", message)
+	fmt.Printf(ColorYellow+"  !"+ColorReset+" %s\n", message)
 }
 
 func printInfo(message string) {
-	fmt.Printf(ColorBrightCyan+"  ➜"+ColorReset+" "+ColorCyan+"%s"+ColorReset+"\n", message)
+	fmt.Printf("  " + ColorCyan + "›" + ColorReset + " %s\n", message)
 }
 
 func printStep(message string) {
-	fmt.Printf(ColorBrightBlue+"  ⋯"+ColorReset+" "+ColorBlue+"%s"+ColorReset+"\n", message)
+	fmt.Printf("  " + ColorDim + "⋯" + ColorReset + " %s\n", message)
 }
 
 func printProgressBar(current, total int, prefix string) {
