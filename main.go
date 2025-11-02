@@ -43,6 +43,67 @@ type Config struct {
 	// 网络配置
 	TimeoutSeconds int    `json:"timeout_seconds"`
 	UserAgent      string `json:"user_agent"`
+
+	httpClient *http.Client
+	clientOnce sync.Once
+}
+
+func (c *Config) httpClient() *http.Client {
+	c.clientOnce.Do(func() {
+		timeout := c.TimeoutSeconds
+		if timeout <= 0 {
+			timeout = 30
+		}
+
+		if base, ok := http.DefaultTransport.(*http.Transport); ok {
+			transport := base.Clone()
+			transport.MaxIdleConns = 32
+			transport.MaxIdleConnsPerHost = 32
+			transport.IdleConnTimeout = 90 * time.Second
+			c.httpClient = &http.Client{
+				Timeout:   time.Duration(timeout) * time.Second,
+				Transport: transport,
+			}
+			return
+		}
+
+		c.httpClient = &http.Client{
+			Timeout: time.Duration(timeout) * time.Second,
+		}
+	})
+
+	return c.httpClient
+}
+
+func (c *Config) applyRequestHeaders(req *http.Request) {
+	for key, value := range c.Headers {
+		req.Header.Set(key, value)
+	}
+
+	if c.UserAgent != "" && req.Header.Get("User-Agent") == "" {
+		req.Header.Set("User-Agent", c.UserAgent)
+	}
+}
+
+func readResponseBody(resp *http.Response) ([]byte, error) {
+	defer resp.Body.Close()
+
+	var reader io.Reader = resp.Body
+	if strings.Contains(resp.Header.Get("Content-Encoding"), "gzip") {
+		gzipReader, err := gzip.NewReader(resp.Body)
+		if err != nil {
+			return nil, fmt.Errorf("无法创建 gzip reader: %w", err)
+		}
+		defer gzipReader.Close()
+		reader = gzipReader
+	}
+
+	body, err := io.ReadAll(reader)
+	if err != nil {
+		return nil, fmt.Errorf("无法读取响应: %w", err)
+	}
+
+	return body, nil
 }
 
 // GenerateRequest 生成邮箱地址请求体
@@ -198,51 +259,36 @@ func generateHME(config *Config) (string, error) {
 		return "", fmt.Errorf("无法创建请求: %v", err)
 	}
 
-	// 设置请求头
-	for key, value := range config.Headers {
-		req.Header.Set(key, value)
+	config.applyRequestHeaders(req)
+	if req.Header.Get("Content-Type") == "" {
+		req.Header.Set("Content-Type", "application/json")
 	}
 
 	// 发送请求
-	client := &http.Client{
-		Timeout: 30 * time.Second,
-	}
-	resp, err := client.Do(req)
+	resp, err := config.httpClient().Do(req)
 	if err != nil {
 		return "", fmt.Errorf("请求失败: %v", err)
 	}
-	defer resp.Body.Close()
 
-	// 读取响应（处理 gzip 压缩）
-	var reader io.Reader = resp.Body
-	if strings.Contains(resp.Header.Get("Content-Encoding"), "gzip") {
-		gzipReader, err := gzip.NewReader(resp.Body)
-		if err != nil {
-			return "", fmt.Errorf("无法创建 gzip reader: %v", err)
-		}
-		defer gzipReader.Close()
-		reader = gzipReader
-	}
-
-	body, err := io.ReadAll(reader)
+	body, err := readResponseBody(resp)
 	if err != nil {
-		return "", fmt.Errorf("无法读取响应: %v", err)
+		return "", err
 	}
 
 	// 检查HTTP状态码
 	if resp.StatusCode != http.StatusOK {
-		return "", fmt.Errorf("API返回错误状态码: %d, 响应: %s", resp.StatusCode, string(body))
+		return "", fmt.Errorf("API返回错误状态码: %d, 响应: %s", resp.StatusCode, strings.TrimSpace(string(body)))
 	}
 
 	// 解析响应
 	var response GenerateResponse
 	if err := json.Unmarshal(body, &response); err != nil {
-		return "", fmt.Errorf("无法解析响应: %v, 原始响应: %s", err, string(body))
+		return "", fmt.Errorf("无法解析响应: %v, 原始响应: %s", err, strings.TrimSpace(string(body)))
 	}
 
 	// 检查是否成功
 	if !response.Success {
-		return "", fmt.Errorf("API返回失败: %s", string(body))
+		return "", fmt.Errorf("API返回失败: %s", strings.TrimSpace(string(body)))
 	}
 
 	return response.Result.HME, nil
@@ -276,51 +322,36 @@ func reserveHME(config *Config, hme string, label string) (string, error) {
 		return "", fmt.Errorf("无法创建请求: %v", err)
 	}
 
-	// 设置请求头
-	for key, value := range config.Headers {
-		req.Header.Set(key, value)
+	config.applyRequestHeaders(req)
+	if req.Header.Get("Content-Type") == "" {
+		req.Header.Set("Content-Type", "application/json")
 	}
 
 	// 发送请求
-	client := &http.Client{
-		Timeout: 30 * time.Second,
-	}
-	resp, err := client.Do(req)
+	resp, err := config.httpClient().Do(req)
 	if err != nil {
 		return "", fmt.Errorf("请求失败: %v", err)
 	}
-	defer resp.Body.Close()
 
-	// 读取响应（处理 gzip 压缩）
-	var reader io.Reader = resp.Body
-	if strings.Contains(resp.Header.Get("Content-Encoding"), "gzip") {
-		gzipReader, err := gzip.NewReader(resp.Body)
-		if err != nil {
-			return "", fmt.Errorf("无法创建 gzip reader: %v", err)
-		}
-		defer gzipReader.Close()
-		reader = gzipReader
-	}
-
-	body, err := io.ReadAll(reader)
+	body, err := readResponseBody(resp)
 	if err != nil {
-		return "", fmt.Errorf("无法读取响应: %v", err)
+		return "", err
 	}
 
 	// 检查HTTP状态码
 	if resp.StatusCode != http.StatusOK {
-		return "", fmt.Errorf("API返回错误状态码: %d, 响应: %s", resp.StatusCode, string(body))
+		return "", fmt.Errorf("API返回错误状态码: %d, 响应: %s", resp.StatusCode, strings.TrimSpace(string(body)))
 	}
 
 	// 解析响应
 	var response ReserveResponse
 	if err := json.Unmarshal(body, &response); err != nil {
-		return "", fmt.Errorf("无法解析响应: %v, 原始响应: %s", err, string(body))
+		return "", fmt.Errorf("无法解析响应: %v, 原始响应: %s", err, strings.TrimSpace(string(body)))
 	}
 
 	// 检查是否成功
 	if !response.Success {
-		return "", fmt.Errorf("API返回失败: %s", string(body))
+		return "", fmt.Errorf("API返回失败: %s", strings.TrimSpace(string(body)))
 	}
 
 	// 返回实际的邮箱地址 - 注意是 result.hme.hme
@@ -362,42 +393,26 @@ func listHME(config *Config) ([]HMEEmail, error) {
 		return nil, fmt.Errorf("无法创建请求: %v", err)
 	}
 
-	// 设置请求头
-	for key, value := range config.Headers {
-		req.Header.Set(key, value)
-	}
+	config.applyRequestHeaders(req)
 
 	// 发送请求
-	client := &http.Client{Timeout: 30 * time.Second}
-	resp, err := client.Do(req)
+	resp, err := config.httpClient().Do(req)
 	if err != nil {
 		return nil, fmt.Errorf("网络请求失败: %v", err)
 	}
-	defer resp.Body.Close()
 
-	// 读取响应
-	var reader io.Reader = resp.Body
-	if strings.Contains(resp.Header.Get("Content-Encoding"), "gzip") {
-		gzipReader, err := gzip.NewReader(resp.Body)
-		if err != nil {
-			return nil, fmt.Errorf("解压响应失败: %v", err)
-		}
-		defer gzipReader.Close()
-		reader = gzipReader
-	}
-
-	body, err := io.ReadAll(reader)
+	body, err := readResponseBody(resp)
 	if err != nil {
-		return nil, fmt.Errorf("读取响应失败: %v", err)
+		return nil, err
 	}
 
 	if resp.StatusCode != http.StatusOK {
-		return nil, fmt.Errorf("服务器返回错误 (状态码: %d)", resp.StatusCode)
+		return nil, fmt.Errorf("服务器返回错误 (状态码: %d, 响应: %s)", resp.StatusCode, strings.TrimSpace(string(body)))
 	}
 
 	var response ListResponse
 	if err := json.Unmarshal(body, &response); err != nil {
-		return nil, fmt.Errorf("解析响应失败: %v", err)
+		return nil, fmt.Errorf("解析响应失败: %v, 原始响应: %s", err, strings.TrimSpace(string(body)))
 	}
 
 	if !response.Success {
@@ -434,39 +449,28 @@ func deactivateHME(config *Config, anonymousID string) error {
 		return fmt.Errorf("创建请求失败: %v", err)
 	}
 
-	for key, value := range config.Headers {
-		req.Header.Set(key, value)
+	config.applyRequestHeaders(req)
+	if req.Header.Get("Content-Type") == "" {
+		req.Header.Set("Content-Type", "application/json")
 	}
 
-	client := &http.Client{Timeout: 30 * time.Second}
-	resp, err := client.Do(req)
+	resp, err := config.httpClient().Do(req)
 	if err != nil {
 		return fmt.Errorf("网络请求失败: %v", err)
 	}
-	defer resp.Body.Close()
 
-	var reader io.Reader = resp.Body
-	if strings.Contains(resp.Header.Get("Content-Encoding"), "gzip") {
-		gzipReader, err := gzip.NewReader(resp.Body)
-		if err != nil {
-			return fmt.Errorf("解压响应失败: %v", err)
-		}
-		defer gzipReader.Close()
-		reader = gzipReader
-	}
-
-	body, err := io.ReadAll(reader)
+	body, err := readResponseBody(resp)
 	if err != nil {
-		return fmt.Errorf("读取响应失败: %v", err)
+		return err
 	}
 
 	if resp.StatusCode != http.StatusOK {
-		return fmt.Errorf("服务器返回错误 (状态码: %d)", resp.StatusCode)
+		return fmt.Errorf("服务器返回错误 (状态码: %d, 响应: %s)", resp.StatusCode, strings.TrimSpace(string(body)))
 	}
 
 	var response DeactivateResponse
 	if err := json.Unmarshal(body, &response); err != nil {
-		return fmt.Errorf("解析响应失败: %v", err)
+		return fmt.Errorf("解析响应失败: %v, 原始响应: %s", err, strings.TrimSpace(string(body)))
 	}
 
 	if !response.Success {
@@ -503,39 +507,28 @@ func permanentDeleteHME(config *Config, anonymousID string) error {
 		return fmt.Errorf("创建请求失败: %v", err)
 	}
 
-	for key, value := range config.Headers {
-		req.Header.Set(key, value)
+	config.applyRequestHeaders(req)
+	if req.Header.Get("Content-Type") == "" {
+		req.Header.Set("Content-Type", "application/json")
 	}
 
-	client := &http.Client{Timeout: 30 * time.Second}
-	resp, err := client.Do(req)
+	resp, err := config.httpClient().Do(req)
 	if err != nil {
 		return fmt.Errorf("网络请求失败: %v", err)
 	}
-	defer resp.Body.Close()
 
-	var reader io.Reader = resp.Body
-	if strings.Contains(resp.Header.Get("Content-Encoding"), "gzip") {
-		gzipReader, err := gzip.NewReader(resp.Body)
-		if err != nil {
-			return fmt.Errorf("解压响应失败: %v", err)
-		}
-		defer gzipReader.Close()
-		reader = gzipReader
-	}
-
-	body, err := io.ReadAll(reader)
+	body, err := readResponseBody(resp)
 	if err != nil {
-		return fmt.Errorf("读取响应失败: %v", err)
+		return err
 	}
 
 	if resp.StatusCode != http.StatusOK {
-		return fmt.Errorf("服务器返回错误 (状态码: %d)", resp.StatusCode)
+		return fmt.Errorf("服务器返回错误 (状态码: %d, 响应: %s)", resp.StatusCode, strings.TrimSpace(string(body)))
 	}
 
 	var response PermanentDeleteResponse
 	if err := json.Unmarshal(body, &response); err != nil {
-		return fmt.Errorf("解析响应失败: %v", err)
+		return fmt.Errorf("解析响应失败: %v, 原始响应: %s", err, strings.TrimSpace(string(body)))
 	}
 
 	if !response.Success {
@@ -572,39 +565,28 @@ func reactivateHME(config *Config, anonymousID string) error {
 		return fmt.Errorf("创建请求失败: %v", err)
 	}
 
-	for key, value := range config.Headers {
-		req.Header.Set(key, value)
+	config.applyRequestHeaders(req)
+	if req.Header.Get("Content-Type") == "" {
+		req.Header.Set("Content-Type", "application/json")
 	}
 
-	client := &http.Client{Timeout: 30 * time.Second}
-	resp, err := client.Do(req)
+	resp, err := config.httpClient().Do(req)
 	if err != nil {
 		return fmt.Errorf("网络请求失败: %v", err)
 	}
-	defer resp.Body.Close()
 
-	var reader io.Reader = resp.Body
-	if strings.Contains(resp.Header.Get("Content-Encoding"), "gzip") {
-		gzipReader, err := gzip.NewReader(resp.Body)
-		if err != nil {
-			return fmt.Errorf("解压响应失败: %v", err)
-		}
-		defer gzipReader.Close()
-		reader = gzipReader
-	}
-
-	body, err := io.ReadAll(reader)
+	body, err := readResponseBody(resp)
 	if err != nil {
-		return fmt.Errorf("读取响应失败: %v", err)
+		return err
 	}
 
 	if resp.StatusCode != http.StatusOK {
-		return fmt.Errorf("服务器返回错误 (状态码: %d)", resp.StatusCode)
+		return fmt.Errorf("服务器返回错误 (状态码: %d, 响应: %s)", resp.StatusCode, strings.TrimSpace(string(body)))
 	}
 
 	var response ReactivateResponse
 	if err := json.Unmarshal(body, &response); err != nil {
-		return fmt.Errorf("解析响应失败: %v", err)
+		return fmt.Errorf("解析响应失败: %v, 原始响应: %s", err, strings.TrimSpace(string(body)))
 	}
 
 	if !response.Success {
@@ -723,6 +705,45 @@ func printProgressBar(current, total int, prefix string) {
 	}
 }
 
+func withSpinner(message string, action func() error) error {
+	frames := []string{"|", "/", "-", "\\"}
+	fmt.Printf(ColorCyan+"%s "+ColorReset, message)
+
+	done := make(chan struct{})
+	var wg sync.WaitGroup
+	wg.Add(1)
+
+	go func() {
+		defer wg.Done()
+		ticker := time.NewTicker(120 * time.Millisecond)
+		defer ticker.Stop()
+		idx := 0
+		for {
+			select {
+			case <-done:
+				return
+			case <-ticker.C:
+				fmt.Printf("\r"+ColorCyan+"%s %s"+ColorReset, message, frames[idx])
+				idx = (idx + 1) % len(frames)
+			}
+		}
+	}()
+
+	err := action()
+	close(done)
+	wg.Wait()
+
+	stateColor := ColorCyan
+	stateLabel := "完成"
+	if err != nil {
+		stateColor = ColorRed
+		stateLabel = "失败"
+	}
+
+	fmt.Printf("\r"+ColorCyan+"%s "+ColorReset+stateColor+"%s"+ColorReset+"  \n", message, stateLabel)
+	return err
+}
+
 func readInput(prompt string) string {
 	fmt.Print(prompt)
 	reader := bufio.NewReader(os.Stdin)
@@ -777,17 +798,12 @@ func showMainMenu() {
 // 查看邮箱列表
 func handleListEmails(config *Config) {
 	printHeader("邮箱列表")
-	fmt.Print(ColorCyan + "正在获取邮箱列表" + ColorReset)
-
-	// 显示加载动画
-	for i := 0; i < 3; i++ {
-		fmt.Print(ColorBlue + "." + ColorReset)
-		time.Sleep(300 * time.Millisecond)
-	}
-	fmt.Println()
-
-	emails, err := listHME(config)
-	if err != nil {
+	var emails []HMEEmail
+	if err := withSpinner("正在获取邮箱列表", func() error {
+		var err error
+		emails, err = listHME(config)
+		return err
+	}); err != nil {
 		printError(fmt.Sprintf("获取邮箱列表失败: %v", err))
 		return
 	}
@@ -844,15 +860,12 @@ func handleCreateEmail(config *Config) {
 
 	fmt.Printf("\n"+ColorBlue+"正在创建邮箱 (标签: %s)"+ColorReset, label)
 
-	// 显示加载动画
-	for i := 0; i < 3; i++ {
-		fmt.Print(ColorBlue + "." + ColorReset)
-		time.Sleep(500 * time.Millisecond)
-	}
-	fmt.Println()
-
-	email, err := createHME(config, label)
-	if err != nil {
+	var email string
+	if err := withSpinner("正在创建邮箱", func() error {
+		var err error
+		email, err = createHME(config, label)
+		return err
+	}); err != nil {
 		printError(fmt.Sprintf("邮箱创建失败: %v", err))
 		return
 	}
@@ -866,17 +879,12 @@ func handleCreateEmail(config *Config) {
 // 停用邮箱
 func handleDeleteEmails(config *Config) {
 	printHeader("停用邮箱")
-	fmt.Print(ColorCyan + "正在获取邮箱列表" + ColorReset)
-
-	// 显示加载动画
-	for i := 0; i < 3; i++ {
-		fmt.Print(ColorBlue + "." + ColorReset)
-		time.Sleep(300 * time.Millisecond)
-	}
-	fmt.Println()
-
-	emails, err := listHME(config)
-	if err != nil {
+	var emails []HMEEmail
+	if err := withSpinner("正在获取邮箱列表", func() error {
+		var err error
+		emails, err = listHME(config)
+		return err
+	}); err != nil {
 		printError(fmt.Sprintf("获取邮箱列表失败: %v", err))
 		return
 	}
@@ -1035,17 +1043,12 @@ func handlePermanentDelete(config *Config) {
 	printHeader("彻底删除停用的邮箱（不可恢复！）")
 	printWarning("此操作将永久删除邮箱，无法恢复！")
 
-	fmt.Print(ColorCyan + "正在获取邮箱列表" + ColorReset)
-
-	// 显示加载动画
-	for i := 0; i < 3; i++ {
-		fmt.Print(ColorBlue + "." + ColorReset)
-		time.Sleep(300 * time.Millisecond)
-	}
-	fmt.Println()
-
-	emails, err := listHME(config)
-	if err != nil {
+	var emails []HMEEmail
+	if err := withSpinner("正在获取邮箱列表", func() error {
+		var err error
+		emails, err = listHME(config)
+		return err
+	}); err != nil {
 		printError(fmt.Sprintf("获取邮箱列表失败: %v", err))
 		return
 	}
@@ -1146,17 +1149,12 @@ func handlePermanentDelete(config *Config) {
 // 重新激活停用的邮箱
 func handleReactivate(config *Config) {
 	printHeader("重新激活停用的邮箱")
-	fmt.Print(ColorCyan + "正在获取邮箱列表" + ColorReset)
-
-	// 显示加载动画
-	for i := 0; i < 3; i++ {
-		fmt.Print(ColorBlue + "." + ColorReset)
-		time.Sleep(300 * time.Millisecond)
-	}
-	fmt.Println()
-
-	emails, err := listHME(config)
-	if err != nil {
+	var emails []HMEEmail
+	if err := withSpinner("正在获取邮箱列表", func() error {
+		var err error
+		emails, err = listHME(config)
+		return err
+	}); err != nil {
 		printError(fmt.Sprintf("获取邮箱列表失败: %v", err))
 		return
 	}
@@ -1259,22 +1257,18 @@ func main() {
 	printSeparator()
 
 	// 加载配置
-	fmt.Print(ColorCyan + "正在加载配置文件" + ColorReset)
-	for i := 0; i < 3; i++ {
-		fmt.Print(ColorBlue + "." + ColorReset)
-		time.Sleep(200 * time.Millisecond)
-	}
-	fmt.Println()
-
-	config, err := loadConfig("config.json")
-	if err != nil {
+	var config *Config
+	if err := withSpinner("正在加载配置文件", func() error {
+		var err error
+		config, err = loadConfig("config.json")
+		return err
+	}); err != nil {
 		printError(fmt.Sprintf("加载配置失败: %v", err))
 		printInfo("请确保 config.json 文件存在且格式正确")
 		os.Exit(1)
 	}
 
 	printSuccess("配置加载成功")
-	time.Sleep(500 * time.Millisecond)
 
 	// 主循环
 	for {
