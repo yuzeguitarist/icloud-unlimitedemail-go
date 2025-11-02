@@ -606,7 +606,7 @@ func batchGenerate(config *Config, count int, labelPrefix string) ([]string, []e
 	var mu sync.Mutex
 
 	printSubHeader("批量创建执行中")
-	fmt.Printf("  "+ColorGray+"数量: %d | 标签: %s*"+ColorReset+"\n\n", count, labelPrefix)
+	fmt.Printf("  "+ColorBrightMagenta+"📦 数量: "+ColorReset+ColorBold+ColorBrightWhite+"%d"+ColorReset+" "+ColorCyan+"|"+ColorReset+" "+ColorBrightBlue+"🏷 标签: "+ColorReset+ColorCyan+"%s*"+ColorReset+"\n\n", count, labelPrefix)
 
 	for i := 0; i < count; i++ {
 		label := fmt.Sprintf("%s%d", labelPrefix, i+1)
@@ -620,19 +620,19 @@ func batchGenerate(config *Config, count int, labelPrefix string) ([]string, []e
 
 		mu.Lock()
 		if err != nil {
-			fmt.Printf(ColorError+"✗ 失败"+ColorReset+"\n")
-			fmt.Printf("    "+ColorGray+"错误: %v"+ColorReset+"\n", err)
+			fmt.Printf(ColorBrightRed+"✗ 失败"+ColorReset+"\n")
+			fmt.Printf("    "+ColorRed+"⚠ 错误: %v"+ColorReset+"\n", err)
 			errors = append(errors, err)
 		} else {
-			fmt.Printf(ColorSuccess+"✓"+ColorReset+"\n")
-			fmt.Printf("    "+ColorGray+"邮箱: "+ColorReset+"%s\n", email)
+			fmt.Printf(ColorBrightGreen+"✓"+ColorReset+"\n")
+			fmt.Printf("    "+ColorBrightCyan+"✉ 邮箱: "+ColorReset+ColorCyan+"%s"+ColorReset+"\n", email)
 			emails = append(emails, email)
 		}
 		mu.Unlock()
 
 		// 延迟
 		if i < count-1 && config.DelaySeconds > 0 {
-			fmt.Printf("    "+ColorGray+"等待 %ds"+ColorReset+"\n", config.DelaySeconds)
+			fmt.Printf("    "+ColorBrightYellow+"⏳ 等待 "+ColorReset+ColorYellow+"%ds"+ColorReset+"\n", config.DelaySeconds)
 			time.Sleep(time.Duration(config.DelaySeconds) * time.Second)
 		}
 	}
@@ -644,68 +644,84 @@ func batchGenerate(config *Config, count int, labelPrefix string) ([]string, []e
 	return emails, errors
 }
 
-// ANSI 颜色代码 - 专业配色方案
+// ANSI 颜色代码 - 丰富多彩配色方案
 const (
-	ColorReset      = "\033[0m"
-	ColorBold       = "\033[1m"
-	ColorDim        = "\033[2m"
+	ColorReset   = "\033[0m"
+	ColorBold    = "\033[1m"
+	ColorDim     = "\033[2m"
 	
-	// 主色调 - 黑白灰
-	ColorWhite      = "\033[97m"
-	ColorGray       = "\033[90m"
-	ColorLightGray  = "\033[37m"
+	// 基础颜色 - 大胆使用
+	ColorRed     = "\033[31m"
+	ColorGreen   = "\033[32m"
+	ColorYellow  = "\033[33m"
+	ColorBlue    = "\033[34m"
+	ColorMagenta = "\033[35m"
+	ColorCyan    = "\033[36m"
+	ColorWhite   = "\033[37m"
 	
-	// 功能色 - 克制使用
-	ColorSuccess    = "\033[32m"  // 成功 - 绿色
-	ColorError      = "\033[31m"  // 错误 - 红色
-	ColorWarning    = "\033[33m"  // 警告 - 黄色
-	ColorInfo       = "\033[36m"  // 信息 - 青色
+	// 亮色版本
+	ColorBrightRed     = "\033[91m"
+	ColorBrightGreen   = "\033[92m"
+	ColorBrightYellow  = "\033[93m"
+	ColorBrightBlue    = "\033[94m"
+	ColorBrightMagenta = "\033[95m"
+	ColorBrightCyan    = "\033[96m"
+	ColorBrightWhite   = "\033[97m"
+	
+	// 灰色系
+	ColorGray      = "\033[90m"
+	ColorLightGray = "\033[37m"
 	
 	// 背景色
-	BgDark          = "\033[100m"
+	BgRed     = "\033[41m"
+	BgGreen   = "\033[42m"
+	BgYellow  = "\033[43m"
+	BgBlue    = "\033[44m"
+	BgMagenta = "\033[45m"
+	BgCyan    = "\033[46m"
 )
 
-// UI 辅助函数 - 专业简洁风格
+// UI 辅助函数 - 多彩风格
 func printSeparator() {
-	fmt.Println(ColorGray + strings.Repeat("─", 70) + ColorReset)
+	fmt.Println(ColorCyan + strings.Repeat("─", 70) + ColorReset)
 }
 
 func printThickSeparator() {
-	fmt.Println(ColorWhite + strings.Repeat("━", 70) + ColorReset)
+	fmt.Println(ColorBrightCyan + strings.Repeat("━", 70) + ColorReset)
 }
 
 func printHeader(title string) {
 	fmt.Println()
 	printThickSeparator()
-	fmt.Printf(ColorBold+ColorWhite+" %s"+ColorReset+"\n", title)
+	fmt.Printf(ColorBold+ColorBrightMagenta+"  ✦ %s ✦"+ColorReset+"\n", title)
 	printThickSeparator()
 	fmt.Println()
 }
 
 func printSubHeader(title string) {
 	fmt.Println()
-	fmt.Printf(ColorBold+ColorWhite+"┌─ %s"+ColorReset+"\n", title)
+	fmt.Printf(ColorBold+ColorBrightBlue+"┌─ %s"+ColorReset+"\n", title)
 	printSeparator()
 }
 
 func printSuccess(message string) {
-	fmt.Printf(ColorSuccess+"  ✓"+ColorReset+" %s\n", message)
+	fmt.Printf(ColorBrightGreen+"  ✓"+ColorReset+" "+ColorGreen+"%s"+ColorReset+"\n", message)
 }
 
 func printError(message string) {
-	fmt.Printf(ColorError+"  ✗"+ColorReset+" %s\n", message)
+	fmt.Printf(ColorBrightRed+"  ✗"+ColorReset+" "+ColorRed+"%s"+ColorReset+"\n", message)
 }
 
 func printWarning(message string) {
-	fmt.Printf(ColorWarning+"  !"+ColorReset+" %s\n", message)
+	fmt.Printf(ColorBrightYellow+"  ⚠"+ColorReset+" "+ColorYellow+"%s"+ColorReset+"\n", message)
 }
 
 func printInfo(message string) {
-	fmt.Printf(ColorInfo+"  ›"+ColorReset+" %s\n", message)
+	fmt.Printf(ColorBrightCyan+"  ➜"+ColorReset+" "+ColorCyan+"%s"+ColorReset+"\n", message)
 }
 
 func printStep(message string) {
-	fmt.Printf(ColorGray+"  ⋯"+ColorReset+" %s\n", message)
+	fmt.Printf(ColorBrightBlue+"  ⋯"+ColorReset+" "+ColorBlue+"%s"+ColorReset+"\n", message)
 }
 
 func printProgressBar(current, total int, prefix string) {
@@ -713,21 +729,28 @@ func printProgressBar(current, total int, prefix string) {
 	progress := float64(current) / float64(total)
 	filled := int(progress * float64(barWidth))
 
-	// 使用专业的进度条样式
+	// 彩色渐变进度条
 	var bar strings.Builder
-	bar.WriteString("[") 
+	bar.WriteString(ColorBrightWhite + "[" + ColorReset) 
 	for i := 0; i < barWidth; i++ {
 		if i < filled {
-			bar.WriteString(ColorSuccess + "━" + ColorReset)
+			// 根据进度使用不同颜色
+			if progress < 0.3 {
+				bar.WriteString(ColorBrightRed + "█" + ColorReset)
+			} else if progress < 0.7 {
+				bar.WriteString(ColorBrightYellow + "█" + ColorReset)
+			} else {
+				bar.WriteString(ColorBrightGreen + "█" + ColorReset)
+			}
 		} else {
-			bar.WriteString(ColorGray + "━" + ColorReset)
+			bar.WriteString(ColorGray + "░" + ColorReset)
 		}
 	}
-	bar.WriteString("]")
+	bar.WriteString(ColorBrightWhite + "]" + ColorReset)
 	
 	percentage := int(progress * 100)
 	
-	fmt.Printf("\r  "+ColorDim+"%s"+ColorReset+" %s "+ColorBold+"%3d%%"+ColorReset+" "+ColorGray+"(%d/%d)"+ColorReset, 
+	fmt.Printf("\r  "+ColorBrightCyan+"%s"+ColorReset+" %s "+ColorBold+ColorBrightMagenta+"%3d%%"+ColorReset+" "+ColorBlue+"(%d/%d)"+ColorReset, 
 		prefix, bar.String(), percentage, current, total)
 		
 	if current == total {
@@ -736,8 +759,9 @@ func printProgressBar(current, total int, prefix string) {
 }
 
 func withSpinner(message string, action func() error) error {
-	// 使用专业的加载动画
+	// 彩色加载动画
 	frames := []string{"⠋", "⠙", "⠹", "⠸", "⠼", "⠴", "⠦", "⠧", "⠇", "⠏"}
+	colors := []string{ColorBrightCyan, ColorBrightBlue, ColorBrightMagenta, ColorBrightRed, ColorBrightYellow, ColorBrightGreen}
 	
 	done := make(chan struct{})
 	var wg sync.WaitGroup
@@ -753,7 +777,8 @@ func withSpinner(message string, action func() error) error {
 			case <-done:
 				return
 			case <-ticker.C:
-				fmt.Printf("\r  "+ColorInfo+"%s"+ColorReset+" %s", frames[idx], message)
+				colorIdx := idx % len(colors)
+				fmt.Printf("\r  "+colors[colorIdx]+"%s"+ColorReset+" "+ColorBrightWhite+"%s"+ColorReset, frames[idx], message)
 				idx = (idx + 1) % len(frames)
 			}
 		}
@@ -764,16 +789,16 @@ func withSpinner(message string, action func() error) error {
 	wg.Wait()
 
 	if err != nil {
-		fmt.Printf("\r  "+ColorError+"✗"+ColorReset+" %s "+ColorError+"失败"+ColorReset+"  \n", message)
+		fmt.Printf("\r  "+ColorBrightRed+"✗"+ColorReset+" "+ColorBrightWhite+"%s"+ColorReset+" "+ColorRed+"失败"+ColorReset+"  \n", message)
 	} else {
-		fmt.Printf("\r  "+ColorSuccess+"✓"+ColorReset+" %s "+ColorGray+"完成"+ColorReset+"  \n", message)
+		fmt.Printf("\r  "+ColorBrightGreen+"✓"+ColorReset+" "+ColorBrightWhite+"%s"+ColorReset+" "+ColorGreen+"完成"+ColorReset+"  \n", message)
 	}
 	
 	return err
 }
 
 func readInput(prompt string) string {
-	fmt.Print(ColorGray + "  " + ColorReset + prompt)
+	fmt.Print(ColorBrightYellow + "  ➤ " + ColorReset + ColorBrightWhite + prompt + ColorReset)
 	reader := bufio.NewReader(os.Stdin)
 	input, _ := reader.ReadString('\n')
 	return strings.TrimSpace(input)
@@ -785,7 +810,7 @@ func readInt(prompt string) (int, error) {
 }
 
 func confirmAction(message string) bool {
-	fmt.Printf("\n  "+ColorWarning+"?"+ColorReset+" %s "+ColorGray+"(y/n)"+ColorReset+": ", message)
+	fmt.Printf("\n  "+ColorBrightYellow+"?"+ColorReset+" "+ColorBrightWhite+"%s"+ColorReset+" "+ColorCyan+"(y/n)"+ColorReset+": ", message)
 	reader := bufio.NewReader(os.Stdin)
 	input, _ := reader.ReadString('\n')
 	input = strings.TrimSpace(strings.ToLower(input))
@@ -816,13 +841,13 @@ func saveEmailsToFile(emails []string, filename string) {
 func showMainMenu() {
 	printHeader("iCloud 隐藏邮箱管理工具")
 	
-	fmt.Println("  "+ColorBold+"["+ColorWhite+"1"+ColorReset+ColorBold+"]"+ColorReset+" 查看邮箱列表")
-	fmt.Println("  "+ColorBold+"["+ColorWhite+"2"+ColorReset+ColorBold+"]"+ColorReset+" 创建新邮箱")
-	fmt.Println("  "+ColorBold+"["+ColorWhite+"3"+ColorReset+ColorBold+"]"+ColorReset+" 停用邮箱")
-	fmt.Println("  "+ColorBold+"["+ColorWhite+"4"+ColorReset+ColorBold+"]"+ColorReset+" 批量创建邮箱")
-	fmt.Println("  "+ColorBold+"["+ColorWhite+"5"+ColorReset+ColorBold+"]"+ColorReset+" 彻底删除停用的邮箱 "+ColorGray+"(不可恢复)"+ColorReset)
-	fmt.Println("  "+ColorBold+"["+ColorWhite+"6"+ColorReset+ColorBold+"]"+ColorReset+" 重新激活停用的邮箱")
-	fmt.Println("  "+ColorBold+"["+ColorWhite+"0"+ColorReset+ColorBold+"]"+ColorReset+" 退出")
+	fmt.Println("  "+ColorBrightGreen+"["+ColorBold+ColorBrightWhite+"1"+ColorReset+ColorBrightGreen+"]"+ColorReset+" "+ColorGreen+"查看邮箱列表"+ColorReset)
+	fmt.Println("  "+ColorBrightBlue+"["+ColorBold+ColorBrightWhite+"2"+ColorReset+ColorBrightBlue+"]"+ColorReset+" "+ColorBlue+"创建新邮箱"+ColorReset)
+	fmt.Println("  "+ColorBrightYellow+"["+ColorBold+ColorBrightWhite+"3"+ColorReset+ColorBrightYellow+"]"+ColorReset+" "+ColorYellow+"停用邮箱"+ColorReset)
+	fmt.Println("  "+ColorBrightMagenta+"["+ColorBold+ColorBrightWhite+"4"+ColorReset+ColorBrightMagenta+"]"+ColorReset+" "+ColorMagenta+"批量创建邮箱"+ColorReset)
+	fmt.Println("  "+ColorBrightRed+"["+ColorBold+ColorBrightWhite+"5"+ColorReset+ColorBrightRed+"]"+ColorReset+" "+ColorRed+"彻底删除停用的邮箱"+ColorReset+" "+ColorGray+"(不可恢复)"+ColorReset)
+	fmt.Println("  "+ColorBrightCyan+"["+ColorBold+ColorBrightWhite+"6"+ColorReset+ColorBrightCyan+"]"+ColorReset+" "+ColorCyan+"重新激活停用的邮箱"+ColorReset)
+	fmt.Println("  "+ColorWhite+"["+ColorBold+ColorBrightWhite+"0"+ColorReset+ColorWhite+"]"+ColorReset+" "+ColorGray+"退出"+ColorReset)
 	
 	printSeparator()
 	fmt.Println()
@@ -857,25 +882,29 @@ func handleListEmails(config *Config) {
 		}
 	}
 
-	fmt.Printf("  "+ColorBold+"总计"+ColorReset+" %d "+ColorGray+"|"+ColorReset+" "+ColorSuccess+"激活"+ColorReset+" %d "+ColorGray+"|"+ColorReset+" "+ColorWarning+"停用"+ColorReset+" %d\n\n",
+	fmt.Printf("  "+ColorBold+ColorBrightMagenta+"✨ 总计"+ColorReset+" "+ColorBrightWhite+"%d"+ColorReset+" "+ColorCyan+"|"+ColorReset+" "+ColorBrightGreen+"✔ 激活"+ColorReset+" "+ColorGreen+"%d"+ColorReset+" "+ColorCyan+"|"+ColorReset+" "+ColorBrightYellow+"⏸ 停用"+ColorReset+" "+ColorYellow+"%d"+ColorReset+"\n\n",
 		len(emails), activeCount, deactivatedCount)
 
 	for i, email := range emails {
-		statusSymbol := ColorSuccess + "●" + ColorReset
-		if !email.IsActive {
-			statusSymbol = ColorGray + "○" + ColorReset
+		var statusSymbol, emailColor string
+		if email.IsActive {
+			statusSymbol = ColorBrightGreen + "●" + ColorReset
+			emailColor = ColorBrightWhite
+		} else {
+			statusSymbol = ColorYellow + "○" + ColorReset
+			emailColor = ColorGray
 		}
 
-		fmt.Printf("  "+ColorGray+"%2d."+ColorReset+" %s %s\n", i+1, statusSymbol, email.HME)
-		fmt.Printf("      "+ColorGray+"标签: "+ColorReset+"%s\n", email.Label)
+		fmt.Printf("  "+ColorBrightCyan+"%2d."+ColorReset+" %s "+emailColor+"%s"+ColorReset+"\n", i+1, statusSymbol, email.HME)
+		fmt.Printf("      "+ColorBrightBlue+"Ἷ7 标签: "+ColorReset+ColorCyan+"%s"+ColorReset+"\n", email.Label)
 		
 		if email.ForwardToEmail != "" {
-			fmt.Printf("      "+ColorGray+"转发: "+ColorReset+"%s\n", email.ForwardToEmail)
+			fmt.Printf("      "+ColorBrightMagenta+"➤ 转发: "+ColorReset+ColorMagenta+"%s"+ColorReset+"\n", email.ForwardToEmail)
 		}
 
 		// 显示创建时间
 		createTime := time.Unix(email.CreateTimestamp/1000, 0)
-		fmt.Printf("      "+ColorGray+"创建: "+ColorReset+"%s\n", createTime.Format("2006-01-02 15:04"))
+		fmt.Printf("      "+ColorBrightGreen+"⏰ 创建: "+ColorReset+ColorGreen+"%s"+ColorReset+"\n", createTime.Format("2006-01-02 15:04"))
 		fmt.Println()
 	}
 }
@@ -902,9 +931,9 @@ func handleCreateEmail(config *Config) {
 
 	fmt.Println()
 	printSuccess("邮箱创建成功")
-	fmt.Printf("\n  "+ColorGray+"邮箱: "+ColorReset+ColorBold+"%s"+ColorReset+"\n", email)
-	fmt.Printf("  "+ColorGray+"标签: "+ColorReset+"%s\n", label)
-	fmt.Printf("  "+ColorGray+"时间: "+ColorReset+"%s\n", time.Now().Format("2006-01-02 15:04"))
+	fmt.Printf("\n  "+ColorBrightMagenta+"✉ 邮箱: "+ColorReset+ColorBold+ColorBrightWhite+"%s"+ColorReset+"\n", email)
+	fmt.Printf("  "+ColorBrightBlue+"Ἷ7 标签: "+ColorReset+ColorCyan+"%s"+ColorReset+"\n", label)
+	fmt.Printf("  "+ColorBrightGreen+"⏰ 时间: "+ColorReset+ColorGreen+"%s"+ColorReset+"\n", time.Now().Format("2006-01-02 15:04"))
 }
 
 // 停用邮箱
@@ -933,11 +962,11 @@ func handleDeleteEmails(config *Config) {
 		return
 	}
 
-	fmt.Printf("  "+ColorBold+"激活邮箱"+ColorReset+" %d 个\n\n", len(activeEmails))
+	fmt.Printf("  "+ColorBold+ColorBrightGreen+"✔ 激活邮箱"+ColorReset+" "+ColorGreen+"%d 个"+ColorReset+"\n\n", len(activeEmails))
 
 	for i, email := range activeEmails {
-		fmt.Printf("  "+ColorGray+"%2d."+ColorReset+" "+ColorSuccess+"●"+ColorReset+" %s\n", i+1, email.HME)
-		fmt.Printf("      "+ColorGray+"标签: "+ColorReset+"%s\n", email.Label)
+		fmt.Printf("  "+ColorBrightCyan+"%2d."+ColorReset+" "+ColorBrightGreen+"●"+ColorReset+" "+ColorBrightWhite+"%s"+ColorReset+"\n", i+1, email.HME)
+		fmt.Printf("      "+ColorBrightBlue+"🏷 标签: "+ColorReset+ColorCyan+"%s"+ColorReset+"\n", email.Label)
 		fmt.Println()
 	}
 
@@ -963,9 +992,9 @@ func handleDeleteEmails(config *Config) {
 	}
 
 	// 显示将要停用的邮箱
-	fmt.Printf("\n  "+ColorBold+"将停用"+ColorReset+" %d 个邮箱\n\n", len(toDeactivate))
+	fmt.Printf("\n  "+ColorBold+ColorBrightYellow+"⏸ 将停用"+ColorReset+" "+ColorYellow+"%d 个邮箱"+ColorReset+"\n\n", len(toDeactivate))
 	for _, email := range toDeactivate {
-		fmt.Printf("  "+ColorWarning+"›"+ColorReset+" %s "+ColorGray+"(%s)"+ColorReset+"\n", email.HME, email.Label)
+		fmt.Printf("  "+ColorBrightYellow+"➜"+ColorReset+" "+ColorBrightWhite+"%s"+ColorReset+" "+ColorCyan+"(%s)"+ColorReset+"\n", email.HME, email.Label)
 	}
 
 	printInfo("停用后可重新激活")
@@ -981,15 +1010,15 @@ func handleDeleteEmails(config *Config) {
 
 	for i, email := range toDeactivate {
 		printProgressBar(i, len(toDeactivate), "停用进度")
-		fmt.Printf("  "+ColorGray+"⋯"+ColorReset+" 停用 %s ... ", email.HME)
+		fmt.Printf("  "+ColorBrightBlue+"⋯"+ColorReset+" 停用 "+ColorCyan+"%s"+ColorReset+" ... ", email.HME)
 
 		err := deactivateHME(config, email.AnonymousID)
 		if err != nil {
-			fmt.Printf(ColorError+"✗"+ColorReset+"\n")
-			fmt.Printf("    "+ColorGray+"错误: %v"+ColorReset+"\n", err)
+			fmt.Printf(ColorBrightRed+"✗"+ColorReset+"\n")
+			fmt.Printf("    "+ColorRed+"⚠ 错误: %v"+ColorReset+"\n", err)
 			failCount++
 		} else {
-			fmt.Printf(ColorSuccess+"✓"+ColorReset+"\n")
+			fmt.Printf(ColorBrightGreen+"✓"+ColorReset+"\n")
 			successCount++
 		}
 
@@ -1034,13 +1063,13 @@ func handleBatchCreate(config *Config) {
 		labelPrefix = "auto-"
 	}
 
-	fmt.Printf("\n  "+ColorBold+"创建计划"+ColorReset+"\n\n")
-	fmt.Printf("  "+ColorGray+"数量: "+ColorReset+"%d 个\n", count)
-	fmt.Printf("  "+ColorGray+"标签: "+ColorReset+"%s1, %s2, %s3, ...\n", labelPrefix, labelPrefix, labelPrefix)
-	fmt.Printf("  "+ColorGray+"延迟: "+ColorReset+"%d 秒\n", config.DelaySeconds)
+	fmt.Printf("\n  "+ColorBold+ColorBrightMagenta+"📝 创建计划"+ColorReset+"\n\n")
+	fmt.Printf("  "+ColorBrightCyan+"📦 数量: "+ColorReset+ColorBold+ColorBrightWhite+"%d"+ColorReset+" 个\n", count)
+	fmt.Printf("  "+ColorBrightBlue+"🏷 标签: "+ColorReset+ColorCyan+"%s1, %s2, %s3, ..."+ColorReset+"\n", labelPrefix, labelPrefix, labelPrefix)
+	fmt.Printf("  "+ColorBrightYellow+"⏳ 延迟: "+ColorReset+ColorYellow+"%d"+ColorReset+" 秒\n", config.DelaySeconds)
 
 	estimatedTime := count * config.DelaySeconds
-	fmt.Printf("  "+ColorGray+"耗时: "+ColorReset+"%d:%02d\n", estimatedTime/60, estimatedTime%60)
+	fmt.Printf("  "+ColorBrightGreen+"⏰ 耗时: "+ColorReset+ColorGreen+"%d:%02d"+ColorReset+"\n", estimatedTime/60, estimatedTime%60)
 
 	if !confirmAction("开始批量创建") {
 		printInfo("已取消")
@@ -1058,10 +1087,10 @@ func handleBatchCreate(config *Config) {
 	}
 
 	if len(emails) > 0 {
-		fmt.Println("\n  "+ColorBold+"创建结果"+ColorReset)
+		fmt.Println("\n  "+ColorBold+ColorBrightMagenta+"✨ 创建结果"+ColorReset)
 		fmt.Println()
 		for i, email := range emails {
-			fmt.Printf("  "+ColorGray+"%2d."+ColorReset+" %s\n", i+1, email)
+			fmt.Printf("  "+ColorBrightCyan+"%2d."+ColorReset+" "+ColorBrightGreen+"✔"+ColorReset+" "+ColorBrightWhite+"%s"+ColorReset+"\n", i+1, email)
 		}
 
 		// 保存到文件
@@ -1130,13 +1159,13 @@ func handlePermanentDelete(config *Config) {
 	}
 
 	// 显示将要删除的邮箱
-	fmt.Printf("\n  "+ColorBold+ColorError+"彻底删除"+ColorReset+" %d 个邮箱\n\n", len(toDelete))
+	fmt.Printf("\n  "+ColorBold+ColorBrightRed+"⚠ 彻底删除"+ColorReset+" "+ColorRed+"%d 个邮箱"+ColorReset+"\n\n", len(toDelete))
 	for _, email := range toDelete {
-		fmt.Printf("  "+ColorError+"›"+ColorReset+" %s "+ColorGray+"(%s)"+ColorReset+"\n", email.HME, email.Label)
+		fmt.Printf("  "+ColorBrightRed+"➜"+ColorReset+" "+ColorBrightWhite+"%s"+ColorReset+" "+ColorCyan+"(%s)"+ColorReset+"\n", email.HME, email.Label)
 	}
 
 	printWarning("此操作不可恢复")
-	fmt.Print("\n  "+ColorError+"?"+ColorReset+" 确认删除? 请输入 "+ColorBold+"DELETE"+ColorReset+": ")
+	fmt.Print("\n  "+ColorBrightRed+"?"+ColorReset+" "+ColorBrightWhite+"确认删除? 请输入"+ColorReset+" "+ColorBold+ColorBrightRed+"DELETE"+ColorReset+": ")
 	reader := bufio.NewReader(os.Stdin)
 	confirm, _ := reader.ReadString('\n')
 	confirm = strings.TrimSpace(confirm)
@@ -1153,15 +1182,15 @@ func handlePermanentDelete(config *Config) {
 
 	for i, email := range toDelete {
 		printProgressBar(i, len(toDelete), "删除进度")
-		fmt.Printf("  "+ColorGray+"⋯"+ColorReset+" 删除 %s ... ", email.HME)
+		fmt.Printf("  "+ColorBrightBlue+"⋯"+ColorReset+" 删除 "+ColorCyan+"%s"+ColorReset+" ... ", email.HME)
 
 		err := permanentDeleteHME(config, email.AnonymousID)
 		if err != nil {
-			fmt.Printf(ColorError+"✗"+ColorReset+"\n")
-			fmt.Printf("    "+ColorGray+"错误: %v"+ColorReset+"\n", err)
+			fmt.Printf(ColorBrightRed+"✗"+ColorReset+"\n")
+			fmt.Printf("    "+ColorRed+"⚠ 错误: %v"+ColorReset+"\n", err)
 			failCount++
 		} else {
-			fmt.Printf(ColorSuccess+"✓"+ColorReset+"\n")
+			fmt.Printf(ColorBrightGreen+"✓"+ColorReset+"\n")
 			successCount++
 		}
 
@@ -1239,9 +1268,9 @@ func handleReactivate(config *Config) {
 	}
 
 	// 显示将要重新激活的邮箱
-	fmt.Printf("\n  "+ColorBold+"将激活"+ColorReset+" %d 个邮箱\n\n", len(toReactivate))
+	fmt.Printf("\n  "+ColorBold+ColorBrightGreen+"✔ 将激活"+ColorReset+" "+ColorGreen+"%d 个邮箱"+ColorReset+"\n\n", len(toReactivate))
 	for _, email := range toReactivate {
-		fmt.Printf("  "+ColorSuccess+"›"+ColorReset+" %s "+ColorGray+"(%s)"+ColorReset+"\n", email.HME, email.Label)
+		fmt.Printf("  "+ColorBrightGreen+"➜"+ColorReset+" "+ColorBrightWhite+"%s"+ColorReset+" "+ColorCyan+"(%s)"+ColorReset+"\n", email.HME, email.Label)
 	}
 
 	if !confirmAction("确认重新激活这些邮箱") {
@@ -1256,15 +1285,15 @@ func handleReactivate(config *Config) {
 
 	for i, email := range toReactivate {
 		printProgressBar(i, len(toReactivate), "激活进度")
-		fmt.Printf("  "+ColorGray+"⋯"+ColorReset+" 激活 %s ... ", email.HME)
+		fmt.Printf("  "+ColorBrightBlue+"⋯"+ColorReset+" 激活 "+ColorCyan+"%s"+ColorReset+" ... ", email.HME)
 
 		err := reactivateHME(config, email.AnonymousID)
 		if err != nil {
-			fmt.Printf(ColorError+"✗"+ColorReset+"\n")
-			fmt.Printf("    "+ColorGray+"错误: %v"+ColorReset+"\n", err)
+			fmt.Printf(ColorBrightRed+"✗"+ColorReset+"\n")
+			fmt.Printf("    "+ColorRed+"⚠ 错误: %v"+ColorReset+"\n", err)
 			failCount++
 		} else {
-			fmt.Printf(ColorSuccess+"✓"+ColorReset+"\n")
+			fmt.Printf(ColorBrightGreen+"✓"+ColorReset+"\n")
 			successCount++
 		}
 
@@ -1289,8 +1318,8 @@ func handleReactivate(config *Config) {
 func main() {
 	// 显示启动信息
 	printHeader("iCloud 隐藏邮箱管理工具")
-	fmt.Printf("  "+ColorGray+"版本"+ColorReset+" v2.0\n")
-	fmt.Printf("  "+ColorGray+"作者"+ColorReset+" yuzeguitarist\n")
+	fmt.Printf("  "+ColorBrightCyan+"Ὠ0 版本"+ColorReset+" "+ColorBold+ColorBrightWhite+"v2.0"+ColorReset+"\n")
+	fmt.Printf("  "+ColorBrightMagenta+"὆4 作者"+ColorReset+" "+ColorMagenta+"yuzeguitarist"+ColorReset+"\n")
 	fmt.Println()
 
 	// 加载配置
@@ -1326,14 +1355,15 @@ func main() {
 		case "0", "q", "quit", "exit":
 			fmt.Println()
 			printThickSeparator()
-			fmt.Printf("  "+ColorGray+"感谢使用"+ColorReset+"\n")
+			fmt.Printf("  "+ColorBrightMagenta+"✨ 感谢使用 iCloud 隐藏邮箱管理工具 ✨"+ColorReset+"\n")
+			fmt.Printf("  "+ColorBrightCyan+"👋 再见！"+ColorReset+"\n")
 			printThickSeparator()
 			return
 		default:
 			printError("无效选择，请输入 0-6")
 		}
 
-		fmt.Print("\n  " + ColorGray + "按回车键继续..." + ColorReset)
+		fmt.Print("\n  " + ColorBrightYellow + "⏎ 按回车键继续..." + ColorReset)
 		readInput("")
 
 		// 清屏效果
