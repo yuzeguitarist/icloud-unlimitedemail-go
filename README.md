@@ -54,7 +54,7 @@
 
 ### 方法一：下载预编译版本（推荐）
 
-从 [Releases](https://github.com/yuzeguitarist/icloud-hme/releases) 页面下载适合你系统的预编译版本。
+从 [Releases](https://github.com/yuzeguitarist/icloud-unlimitedemail-go/releases) 页面下载适合你系统的预编译版本。
 
 | 平台 | 架构 | 文件名 |
 |------|------|--------|
@@ -68,8 +68,8 @@
 
 ```bash
 # 克隆仓库
-git clone https://github.com/yuzeguitarist/icloud-hme.git
-cd icloud-hme
+git clone https://github.com/yuzeguitarist/icloud-unlimitedemail-go.git
+cd icloud-unlimitedemail-go
 
 # 构建所有平台版本
 ./build.sh release
