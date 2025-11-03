@@ -8,7 +8,9 @@ import (
 	"fmt"
 	"io"
 	"net/http"
+	"net/url"
 	"os"
+	"path"
 	"strconv"
 	"strings"
 	"sync"
@@ -90,12 +92,45 @@ func replaceEndpoint(baseURL, target, replacement string) (string, error) {
 		return "", fmt.Errorf("基础URL为空，无法构建API端点")
 	}
 
-	replaced := strings.Replace(baseURL, target, replacement, 1)
-	if replaced == baseURL {
-		return "", fmt.Errorf("基础URL %q 未包含期望的路径片段 %q", baseURL, target)
+	parsedURL, err := url.Parse(baseURL)
+	if err != nil {
+		return "", fmt.Errorf("无法解析基础URL %q: %w", baseURL, err)
 	}
 
-	return replaced, nil
+	normalizePath := func(p string) string {
+		if p == "" {
+			return ""
+		}
+		if !strings.HasPrefix(p, "/") {
+			p = "/" + p
+		}
+		cleaned := path.Clean(p)
+		if cleaned == "." {
+			return ""
+		}
+		return cleaned
+	}
+
+	currentPath := parsedURL.Path
+	if currentPath == "" {
+		currentPath = "/"
+	}
+	currentPath = path.Clean(currentPath)
+	if !strings.HasPrefix(currentPath, "/") {
+		currentPath = "/" + currentPath
+	}
+
+	targetPath := normalizePath(target)
+	replacementPath := normalizePath(replacement)
+
+	updatedPath := strings.Replace(currentPath, targetPath, replacementPath, 1)
+	if updatedPath == currentPath {
+		parsedURL.Path = currentPath
+		return parsedURL.String(), nil
+	}
+
+	parsedURL.Path = updatedPath
+	return parsedURL.String(), nil
 }
 
 func readResponseBody(resp *http.Response) ([]byte, error) {
