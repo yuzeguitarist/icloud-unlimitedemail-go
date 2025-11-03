@@ -1,0 +1,45 @@
+{
+  "base_url": "https://pXXX-maildomainws.icloud.com/v1/hme/reserve",
+  "client_build_number": "XXXX_BUILD_NUMBER",
+  "client_mastering_number": "XXXX_BUILD_NUMBER",
+  "client_id": "xxxxxxxx-xxxx-xxxx-xxxx-xxxxxxxxxxxx",
+  "dsid": "YOUR_DSID_HERE",
+  "headers": {
+    "Accept": "*/*",
+    "Accept-Encoding": "gzip, deflate, br, zstd",
+    "Accept-Language": "en-US,en;q=0.9",
+    "Connection": "keep-alive",
+    "Content-Type": "text/plain",
+    "Origin": "https://www.icloud.com",
+    "Referer": "https://www.icloud.com/",
+    "Sec-Fetch-Dest": "empty",
+    "Sec-Fetch-Mode": "cors",
+    "Sec-Fetch-Site": "same-site",
+    "User-Agent": "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/XXX.0.0.0 Safari/537.36",
+    "sec-ch-ua": "\"Not)A;Brand\";v=\"X\", \"Chromium\";v=\"XXX\", \"Google Chrome\";v=\"XXX\"",
+    "sec-ch-ua-mobile": "?0",
+    "sec-ch-ua-platform": "\"macOS\"",
+    "Cookie": "请在这里填入完整的Cookie字符串"
+  },
+  "lang_code": "en-us",
+  "count": 5,
+  "delay_seconds": 2,
+  "output_file": "generated_emails.txt",
+  "email_quality": {
+    "auto_select": false,
+    "min_score": 70,
+    "max_regenerate_count": 3,
+    "show_scores": true,
+    "allow_manual": true,
+    "show_all_emails": true,
+    "weights": {
+      "prefix_structure": 40,
+      "length": 20,
+      "readability": 25,
+      "security": 15
+    }
+  },
+  "save_generated_emails": false,
+  "email_list_file": "generated_emails.txt",
+  "developer_mode": false
+}

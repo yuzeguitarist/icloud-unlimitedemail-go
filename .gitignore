@@ -1,0 +1,67 @@
+# 编译后的二进制文件
+icloud-hme
+icloud-hme-*
+icloud-hme-generator
+*.exe
+*.exe~
+*.dll
+*.so
+*.dylib
+
+# 构建目录
+build/
+dist/
+old/
+
+# 配置文件（包含敏感信息）
+config.json
+
+# 生成的邮箱文件
+generated_emails.txt
+*.txt
+
+# HAR 文件（可能包含敏感信息）
+*.har
+
+# Cookie 文件
+cookies.txt
+
+# Go 相关
+*.test
+*.prof
+*.out
+go.work
+go.work.sum
+
+# 编辑器和IDE
+.vscode/
+.idea/
+*.swp
+*.swo
+*~
+
+# 操作系统
+.DS_Store
+.DS_Store?
+._*
+.Spotlight-V100
+.Trashes
+ehthumbs.db
+Thumbs.db
+
+# 日志文件
+*.log
+
+# 临时文件
+*.tmp
+*.temp
+
+# 压缩文件
+*.zip
+*.tar.gz
+*.rar
+
+# 备份文件
+*.bak
+*.backup
+
