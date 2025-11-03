@@ -1,5 +1,5 @@
 {
-  "base_url": "https://pXXX-maildomainws.icloud.com/v1/hme/generate",
+  "base_url": "https://pXXX-maildomainws.icloud.com/v1/hme/reserve",
   "client_build_number": "XXXX_BUILD_NUMBER",
   "client_mastering_number": "XXXX_BUILD_NUMBER",
   "client_id": "xxxxxxxx-xxxx-xxxx-xxxx-xxxxxxxxxxxx",

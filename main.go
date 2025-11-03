@@ -121,12 +121,17 @@ func replaceEndpoint(baseURL, target, replacement string) (string, error) {
 	}
 
 	targetPath := normalizePath(target)
+	if targetPath == "" {
+		return "", fmt.Errorf("目标路径为空，无法构建API端点")
+	}
 	replacementPath := normalizePath(replacement)
+	if replacementPath == "" {
+		return "", fmt.Errorf("替换路径为空，无法构建API端点")
+	}
 
 	updatedPath := strings.Replace(currentPath, targetPath, replacementPath, 1)
 	if updatedPath == currentPath {
-		parsedURL.Path = currentPath
-		return parsedURL.String(), nil
+		return "", fmt.Errorf("基础URL %q 未包含期望的路径片段 %q", baseURL, targetPath)
 	}
 
 	parsedURL.Path = updatedPath
