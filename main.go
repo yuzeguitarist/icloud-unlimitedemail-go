@@ -2231,16 +2231,17 @@ func handleProgramSettings(config *Config) {
 	for {
 		printHeader(i18n.T("header.settings"))
 
-		fmt.Printf("  " + ColorBold + "当前配置" + ColorReset + "\n\n")
-		fmt.Printf("  " + ColorGreen + "[1]" + ColorReset + " 邮箱质量设置\n")
-		fmt.Printf("  " + ColorBlue + "[2]" + ColorReset + " 邮箱保存设置\n")
-		fmt.Printf("  "+ColorYellow+"[3]"+ColorReset+" 开发者模式: %s\n", formatBoolSetting(config.DeveloperMode))
-		fmt.Printf("  " + ColorDim + "[0]" + ColorReset + " 返回主菜单\n")
+		fmt.Printf("  " + ColorBold + i18n.T("settings.current") + ColorReset + "\n\n")
+		fmt.Printf("  " + ColorGreen + "[1]" + ColorReset + " " + i18n.T("settings.quality") + "\n")
+		fmt.Printf("  " + ColorBlue + "[2]" + ColorReset + " " + i18n.T("settings.save") + "\n")
+		fmt.Printf("  "+ColorYellow+"[3]"+ColorReset+" " + i18n.T("settings.dev_mode") + ": %s\n", formatBoolSetting(config.DeveloperMode))
+		fmt.Printf("  "+ColorMagenta+"[4]"+ColorReset+" " + i18n.T("settings.language") + "\n")
+		fmt.Printf("  " + ColorDim + "[0]" + ColorReset + " " + i18n.T("settings.return") + "\n")
 
 		printSeparator()
 		fmt.Println()
 
-		choice := readInput("选择设置项 (0-3): ")
+		choice := readInput(i18n.T("prompt.select_option", 4) + ": ")
 		choice = strings.TrimSpace(choice)
 
 		switch choice {
@@ -2250,14 +2251,16 @@ func handleProgramSettings(config *Config) {
 			handleEmailSaveSettings(config)
 		case "3":
 			config.DeveloperMode = !config.DeveloperMode
-			saveConfigWithMessage(config, fmt.Sprintf("开发者模式已设置为: %v", config.DeveloperMode))
+			saveConfigWithMessage(config, i18n.T("config.setting_changed", i18n.T("settings.dev_mode"), config.DeveloperMode))
+		case "4":
+			handleLanguageSettings(config)
 		case "0":
 			return
 		default:
-			printError("无效选择，请输入 0-3")
+			printError(i18n.T("error.invalid_choice", "0-4"))
 		}
 
-		fmt.Print("\n  " + ColorDim + "按回车键继续..." + ColorReset)
+		fmt.Print("\n  " + ColorDim + i18n.T("prompt.continue") + ColorReset)
 		readInput("")
 	}
 }
@@ -2329,11 +2332,78 @@ func handleEmailQualitySettings(config *Config) {
 }
 
 // 格式化布尔设置显示
+// 语言设置
+func handleLanguageSettings(config *Config) {
+	for {
+		printHeader(i18n.T("settings.language"))
+
+		// 获取当前语言的显示名称
+		var currentLangName string
+		switch config.Language {
+		case "zh", "zh-CN", "zh-TW":
+			currentLangName = i18n.T("lang.chinese")
+		case "en", "en-US", "en-GB":
+			currentLangName = i18n.T("lang.english")
+		case "de", "de-DE":
+			currentLangName = i18n.T("lang.german")
+		default:
+			currentLangName = config.Language
+		}
+
+		fmt.Printf("  " + ColorBold + i18n.T("lang.current") + ColorReset + ": " + ColorCyan + currentLangName + ColorReset + "\n\n")
+		fmt.Println("  " + ColorBold + i18n.T("lang.select_prompt") + ColorReset + "\n")
+		fmt.Printf("  " + ColorGreen + "[1]" + ColorReset + " " + i18n.T("lang.chinese") + "\n")
+		fmt.Printf("  " + ColorBlue + "[2]" + ColorReset + " " + i18n.T("lang.english") + "\n")
+		fmt.Printf("  " + ColorYellow + "[3]" + ColorReset + " " + i18n.T("lang.german") + "\n")
+		fmt.Printf("  " + ColorDim + "[0]" + ColorReset + " " + i18n.T("settings.return_parent") + "\n")
+
+		printSeparator()
+		fmt.Println()
+
+		choice := readInput(i18n.T("prompt.select_option", 3) + ": ")
+		choice = strings.TrimSpace(choice)
+
+		var newLang string
+		var langName string
+
+		switch choice {
+		case "1":
+			newLang = "zh"
+			langName = "中文"
+		case "2":
+			newLang = "en"
+			langName = "English"
+		case "3":
+			newLang = "de"
+			langName = "Deutsch"
+		case "0":
+			return
+		default:
+			printError(i18n.T("error.invalid_choice", "0-3"))
+			fmt.Print("\n  " + ColorDim + i18n.T("prompt.continue") + ColorReset)
+			readInput("")
+			continue
+		}
+
+		// 更新配置并立即切换语言
+		config.Language = newLang
+		i18n.SetLanguage(newLang)
+
+		// 保存配置
+		saveConfigWithMessage(config, i18n.T("lang.changed", langName))
+		printInfo(i18n.T("lang.restart_note"))
+
+		fmt.Print("\n  " + ColorDim + i18n.T("prompt.continue") + ColorReset)
+		readInput("")
+		return // 返回上级菜单，让界面刷新
+	}
+}
+
 func formatBoolSetting(value bool) string {
 	if value {
-		return ColorGreen + "启用" + ColorReset
+		return ColorGreen + i18n.T("status.enabled") + ColorReset
 	}
-	return ColorRed + "禁用" + ColorReset
+	return ColorRed + i18n.T("status.disabled") + ColorReset
 }
 
 // 保存邮箱到文件

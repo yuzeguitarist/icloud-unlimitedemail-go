@@ -130,6 +130,7 @@ var deTranslations = map[string]string{
 	"settings.quality":       "E-Mail-Qualitätseinstellungen",
 	"settings.save":          "E-Mail-Speichereinstellungen",
 	"settings.dev_mode":      "Entwicklermodus",
+	"settings.language":      "Spracheinstellungen",
 	"settings.return":        "Zurück zum Hauptmenü",
 	"settings.return_parent": "Zurück zum vorherigen Menü",
 	"settings.auto_select":   "Auto-Auswahl",
@@ -213,4 +214,13 @@ var deTranslations = map[string]string{
 	"error.open_file":        "Datei kann nicht geöffnet werden: %v",
 	"error.write_file":       "Schreiben fehlgeschlagen: %v",
 	"error.save_email_record": "E-Mail-Eintrag kann nicht geschrieben werden: %v",
+
+	// Language settings
+	"lang.select_prompt":     "请选择语言 / Select Language / Sprache wählen",
+	"lang.chinese":           "中文 (Chinese)",
+	"lang.english":           "English",
+	"lang.german":            "Deutsch (German)",
+	"lang.current":           "Aktuelle Sprache",
+	"lang.changed":           "Sprache geändert zu: %s",
+	"lang.restart_note":      "Hinweis: Einige Texte werden nach Rückkehr zum Hauptmenü wirksam",
 }

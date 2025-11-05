@@ -130,6 +130,7 @@ var zhTranslations = map[string]string{
 	"settings.quality":       "邮箱质量设置",
 	"settings.save":          "邮箱保存设置",
 	"settings.dev_mode":      "开发者模式",
+	"settings.language":      "语言设置",
 	"settings.return":        "返回主菜单",
 	"settings.return_parent": "返回上级菜单",
 	"settings.auto_select":   "自动选择",
@@ -213,4 +214,13 @@ var zhTranslations = map[string]string{
 	"error.open_file":        "无法打开文件: %v",
 	"error.write_file":       "写入失败: %v",
 	"error.save_email_record": "无法写入邮箱记录: %v",
+
+	// Language settings
+	"lang.select_prompt":     "请选择语言 / Select Language / Sprache wählen",
+	"lang.chinese":           "中文 (Chinese)",
+	"lang.english":           "English",
+	"lang.german":            "Deutsch (German)",
+	"lang.current":           "当前语言",
+	"lang.changed":           "语言已切换为: %s",
+	"lang.restart_note":      "提示：部分文本需要返回主菜单后生效",
 }

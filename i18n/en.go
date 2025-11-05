@@ -130,6 +130,7 @@ var enTranslations = map[string]string{
 	"settings.quality":       "Email Quality Settings",
 	"settings.save":          "Email Save Settings",
 	"settings.dev_mode":      "Developer Mode",
+	"settings.language":      "Language Settings",
 	"settings.return":        "Return to Main Menu",
 	"settings.return_parent": "Return to Previous Menu",
 	"settings.auto_select":   "Auto-select",
@@ -213,4 +214,13 @@ var enTranslations = map[string]string{
 	"error.open_file":        "Cannot open file: %v",
 	"error.write_file":       "Write failed: %v",
 	"error.save_email_record": "Cannot write email record: %v",
+
+	// Language settings
+	"lang.select_prompt":     "请选择语言 / Select Language / Sprache wählen",
+	"lang.chinese":           "中文 (Chinese)",
+	"lang.english":           "English",
+	"lang.german":            "Deutsch (German)",
+	"lang.current":           "Current Language",
+	"lang.changed":           "Language changed to: %s",
+	"lang.restart_note":      "Note: Some text will take effect after returning to main menu",
 }
