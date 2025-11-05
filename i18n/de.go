@@ -98,7 +98,7 @@ var deTranslations = map[string]string{
 	"msg.cancelled":          "Abgebrochen",
 	"msg.auto_select":        "Beste E-Mail wird automatisch ausgewählt",
 	"msg.manual_select":      "Manuelle Auswahl",
-	"msg.selected_id":        "ID%d ausgewählt",
+	"msg.selected_id":        "ID %d ausgewählt",
 	"msg.target_score":       "Zielbewertung",
 	"msg.max_tries":          "Max. Versuche",
 	"msg.generating":         "E-Mail #%d wird generiert",
@@ -106,7 +106,7 @@ var deTranslations = map[string]string{
 	"msg.select_prompt":      "ID eingeben um E-Mail auszuwählen (1-3), oder 'auto' für automatische Auswahl",
 	"msg.choice_prompt":      "Auswahl",
 	"msg.total_generated":    "%d E-Mails generiert",
-	"msg.recommended_id":     "(Empfohlen: ID%d)",
+	"msg.recommended_id":     "(Empfohlen: ID %d)",
 	"msg.best_mark":          "(Beste)",
 	"msg.detailed_score":     "Detaillierte Bewertung",
 
