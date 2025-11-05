@@ -183,7 +183,7 @@ var deTranslations = map[string]string{
 
 	// Warnings
 	"warn.large_batch":       "Empfohlen werden maximal 50 E-Mails auf einmal",
-	"warn.cannot_reactivate": "Kann nach Deaktivierung reaktiviert werden",
+	"warn.cannot_reactivate": "Kann nach Deaktivierung nicht reaktiviert werden",
 	"warn.cannot_recover":    "Kann nach Löschung nicht wiederhergestellt werden",
 
 	// Email list display
