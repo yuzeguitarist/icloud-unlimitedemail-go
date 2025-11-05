@@ -1,0 +1,226 @@
+package i18n
+
+// enTranslations contains English translations
+var enTranslations = map[string]string{
+	// Error messages
+	"err.read_config":        "Failed to read config file: %v",
+	"err.parse_config":       "Failed to parse config file: %v",
+	"err.serialize_config":   "Failed to serialize config: %v",
+	"err.save_config":        "Failed to save config file: %v",
+	"err.already_running":    "Program already running (PID: %s)",
+	"err.create_lock":        "Failed to create lock file: %v",
+	"err.delete_lock":        "Failed to delete lock file: %v",
+	"err.request_failed":     "Request failed (retry %d times): %v",
+	"err.empty_base_url":     "Base URL is empty, cannot build API endpoint",
+	"err.parse_url":          "Cannot parse base URL %q: %w",
+	"err.empty_target_path":  "Target path is empty, cannot build API endpoint",
+	"err.empty_replace_path": "Replace path is empty, cannot build API endpoint",
+	"err.path_not_found":     "Base URL %q does not contain expected path segment %q",
+	"err.gzip_reader":        "Cannot create gzip reader: %w",
+	"err.read_response":      "Cannot read response: %w",
+	"err.open_config":        "Cannot open config file: %v",
+	"err.build_api":          "Cannot build %s API: %w",
+	"err.serialize_body":     "Cannot serialize request body: %v",
+	"err.create_request":     "Cannot create request: %v",
+	"err.network_failed":     "Request failed: %v",
+	"err.api_status":         "API returned error status code: %d, response: %s",
+	"err.parse_response":     "Cannot parse response: %v, raw response: %s",
+	"err.api_failed":         "API request failed: %s",
+	"err.confirm_failed":     "Failed to confirm email creation: %v",
+	"err.no_candidates":      "No email candidates available",
+	"err.invalid_choice":     "Invalid choice: %s",
+	"err.candidate_not_found": "Cannot find email for ID%d",
+	"err.batch_count":        "Batch creation count must be greater than 0",
+
+	// Headers
+	"header.main":            "iCloud Hide My Email Manager",
+	"header.email_list":      "Email List",
+	"header.create_email":    "Create New Email",
+	"header.smart_create":    "Smart Email Creation",
+	"header.deactivate":      "Deactivate Email",
+	"header.batch_create":    "Batch Create Emails",
+	"header.settings":        "Program Settings",
+	"header.quality_settings": "Email Quality Settings",
+	"header.save_settings":   "Email Save Settings",
+	"header.weight_settings": "Score Weight Settings",
+
+	// Menu items
+	"menu.list":              "View Email List",
+	"menu.create":            "Create New Email",
+	"menu.create_normal":     "(Normal Mode)",
+	"menu.smart_create":      "Smart Email Creation",
+	"menu.recommended":       "(Recommended)",
+	"menu.deactivate":        "Deactivate Email",
+	"menu.batch_create":      "Batch Create Emails",
+	"menu.delete":            "Permanently Delete Deactivated Emails",
+	"menu.unrecoverable":     "(Unrecoverable)",
+	"menu.reactivate":        "Reactivate Deactivated Emails",
+	"menu.settings":          "Program Settings",
+	"menu.test_scoring":      "Test Scoring Algorithm",
+	"menu.dev_debug":         "(Development Debug)",
+	"menu.exit":              "Exit",
+	"menu.exit_hint":         "(or type q/quit/exit)",
+
+	// Labels and info
+	"label.email":            "Email",
+	"label.label":            "Label",
+	"label.forward":          "Forward",
+	"label.created":          "Created",
+	"label.score":            "Score",
+	"label.tries":            "Tries",
+	"label.time":             "Time",
+	"label.count":            "Count",
+	"label.delay":            "Delay",
+	"label.progress":         "Progress",
+
+	// Status
+	"status.active":          "Active",
+	"status.inactive":        "Inactive",
+	"status.total":           "Total",
+	"status.success":         "Success",
+	"status.failed":          "Failed",
+	"status.enabled":         "Enabled",
+	"status.disabled":        "Disabled",
+
+	// Actions
+	"action.loading":         "Loading email list",
+	"action.creating":        "Creating email",
+	"action.confirming":      "Confirming email creation",
+	"action.deactivating":    "Deactivating",
+	"action.deleting":        "Permanently deleting",
+	"action.reactivating":    "Reactivating",
+
+	// Messages
+	"msg.no_emails":          "No emails",
+	"msg.label_required":     "Label cannot be empty",
+	"msg.create_success":     "Email created successfully",
+	"msg.save_failed":        "Failed to save to file: %v",
+	"msg.cancelled":          "Cancelled",
+	"msg.auto_select":        "Auto-selecting best email",
+	"msg.manual_select":      "Manual selection",
+	"msg.selected_id":        "Selected ID%d",
+	"msg.target_score":       "Target score",
+	"msg.max_tries":          "Max tries",
+	"msg.generating":         "Generating email #%d",
+	"msg.best_score":         "Target score reached, auto-selecting",
+	"msg.select_prompt":      "Enter ID to select email (1-3), or type 'auto' to auto-select best",
+	"msg.choice_prompt":      "Choice",
+	"msg.total_generated":    "Generated %d emails",
+	"msg.recommended_id":     "(Recommended: ID%d)",
+	"msg.best_mark":          "(Best)",
+	"msg.detailed_score":     "Detailed score",
+
+	// Smart generation
+	"smart.current_settings": "Current Settings",
+	"smart.auto_select":      "Auto-select",
+	"smart.min_score":        "Min score",
+	"smart.max_tries_label":  "Max tries",
+	"smart.show_scores":      "Show scores",
+	"smart.execution":        "Smart Email Generation",
+
+	// Batch creation
+	"batch.execution":        "Batch Creation in Progress",
+	"batch.plan":             "Creation Plan",
+	"batch.estimated_time":   "Estimated time",
+	"batch.label_prefix":     "Label prefix",
+	"batch.default_prefix":   "(Default: auto-)",
+
+	// Settings
+	"settings.current":       "Current Configuration",
+	"settings.quality":       "Email Quality Settings",
+	"settings.save":          "Email Save Settings",
+	"settings.dev_mode":      "Developer Mode",
+	"settings.language":      "Language Settings",
+	"settings.return":        "Return to Main Menu",
+	"settings.return_parent": "Return to Previous Menu",
+	"settings.auto_select":   "Auto-select",
+	"settings.min_score":     "Minimum score",
+	"settings.max_tries":     "Maximum tries",
+	"settings.show_scores":   "Show scores",
+	"settings.allow_manual":  "Allow manual",
+	"settings.weights":       "Score Weight Settings",
+	"settings.reset":         "Reset to defaults",
+	"settings.save_emails":   "Save generated emails",
+	"settings.file_path":     "Save file path",
+
+	// Weight settings
+	"weight.current":         "Current Weight Configuration",
+	"weight.total":           "(Total: %d)",
+	"weight.prefix":          "Prefix structure",
+	"weight.length":          "Length score",
+	"weight.readability":     "Readability score",
+	"weight.security":        "Security score",
+	"weight.reset":           "Reset to recommended",
+
+	// Score details
+	"score.structure":        "Structure",
+	"score.length":           "Length",
+	"score.readability":      "Readable",
+	"score.security":         "Security",
+
+	// Prompts
+	"prompt.email_label":     "Email label",
+	"prompt.create_count":    "Create count",
+	"prompt.label_prefix":    "Label prefix",
+	"prompt.select_index":    "Enter index (comma separated, e.g.: 1,3,5)",
+	"prompt.index":           "Index",
+	"prompt.confirm":         "(y/n)",
+	"prompt.continue":        "Press Enter to continue...",
+	"prompt.select_option":   "Select option (0-%d)",
+	"prompt.enter_score":     "Enter minimum score (0-100)",
+	"prompt.enter_tries":     "Enter maximum tries (1-5)",
+	"prompt.enter_weight":    "Enter %s weight (0-100)",
+	"prompt.enter_filename":  "Enter save filename",
+	"prompt.invalid_number":  "Please enter a valid number",
+	"prompt.invalid_range":   "Please enter a number between %d-%d",
+	"prompt.filename_empty":  "Filename cannot be empty",
+
+	// Confirmations
+	"confirm.deactivate":     "Confirm deactivating these emails",
+	"confirm.delete":         "Confirm permanently deleting these emails",
+	"confirm.reactivate":     "Confirm reactivating these emails",
+	"confirm.batch_create":   "Continue creating this many emails",
+
+	// Warnings
+	"warn.large_batch":       "Recommend creating no more than 50 at once",
+	"warn.cannot_reactivate": "Can be reactivated after deactivation",
+	"warn.cannot_recover":    "Cannot be recovered after deletion",
+
+	// Email list display
+	"list.no_active":         "No active emails",
+	"list.no_inactive":       "No deactivated emails",
+	"list.will_deactivate":   "Will deactivate %d emails",
+	"list.will_delete":       "Will permanently delete %d emails",
+	"list.will_reactivate":   "Will reactivate %d emails",
+
+	// Results
+	"result.success_count":   "Successfully processed %d",
+	"result.failed_count":    "Failed %d",
+	"result.saved_to":        "Saved to %s",
+
+	// Config messages
+	"config.setting_changed": "%s set to: %v",
+	"config.score_changed":   "Minimum score set to: %d",
+	"config.tries_changed":   "Maximum tries set to: %d",
+	"config.weight_changed":  "%s weight set to: %d",
+	"config.path_changed":    "Save file path set to: %s",
+	"config.reset":           "Reset to default settings",
+	"config.weight_reset":    "Reset to recommended weight configuration",
+
+	// Error prompts
+	"error.invalid_choice":   "Invalid choice, please enter %s",
+	"error.invalid_index":    "Invalid index: %s",
+	"error.read_input":       "Failed to read input: %v",
+	"error.open_file":        "Cannot open file: %v",
+	"error.write_file":       "Write failed: %v",
+	"error.save_email_record": "Cannot write email record: %v",
+
+	// Language settings
+	"lang.select_prompt":     "请选择语言 / Select Language / Sprache wählen",
+	"lang.chinese":           "中文 (Chinese)",
+	"lang.english":           "English",
+	"lang.german":            "Deutsch (German)",
+	"lang.current":           "Current Language",
+	"lang.changed":           "Language changed to: %s",
+	"lang.restart_note":      "Note: Some text will take effect after returning to main menu",
+}

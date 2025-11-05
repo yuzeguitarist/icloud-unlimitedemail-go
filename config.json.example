@@ -41,5 +41,6 @@
   },
   "save_generated_emails": false,
   "email_list_file": "generated_emails.txt",
-  "developer_mode": false
+  "developer_mode": false,
+  "language": "zh"
 }

@@ -31,6 +31,7 @@ import (
 	"context"
 	"encoding/json"
 	"fmt"
+	"icloud-hme-generator/i18n"
 	"io"
 	"net/http"
 	"net/url"
@@ -82,6 +83,9 @@ type Config struct {
 
 	// 开发者模式
 	DeveloperMode bool `json:"developer_mode"` // 开发者模式，显示调试功能
+
+	// 语言设置
+	Language string `json:"language"` // 界面语言: zh(中文), en(英语), de(德语)
 
 	client     *http.Client
 	clientOnce sync.Once
@@ -179,12 +183,12 @@ func (cm *ConfigManager) LoadConfig() (*Config, error) {
 
 	data, err := os.ReadFile(cm.configPath)
 	if err != nil {
-		return nil, fmt.Errorf("读取配置文件失败: %v", err)
+		return nil, fmt.Errorf(i18n.T("err.read_config"), err)
 	}
 
 	var config Config
 	if err := json.Unmarshal(data, &config); err != nil {
-		return nil, fmt.Errorf("解析配置文件失败: %v", err)
+		return nil, fmt.Errorf(i18n.T("err.parse_config"), err)
 	}
 
 	// 设置默认值
@@ -207,11 +211,11 @@ func (cm *ConfigManager) SaveConfig(config *Config) error {
 
 	data, err := json.MarshalIndent(config, "", "  ")
 	if err != nil {
-		return fmt.Errorf("序列化配置失败: %v", err)
+		return fmt.Errorf(i18n.T("err.serialize_config"), err)
 	}
 
 	if err := os.WriteFile(cm.configPath, data, 0644); err != nil {
-		return fmt.Errorf("保存配置文件失败: %v", err)
+		return fmt.Errorf(i18n.T("err.save_config"), err)
 	}
 
 	cm.config = config
@@ -289,6 +293,13 @@ func (cm *ConfigManager) setDefaults(config *Config) {
 		config.EmailListFile = "generated_emails.txt"
 	}
 	// DeveloperMode 默认为 false，不需要设置
+
+	// 设置语言，默认为中文
+	if config.Language == "" {
+		config.Language = "zh"
+	}
+	// 初始化国际化
+	i18n.SetLanguage(config.Language)
 }
 
 // ProcessSafetyManager 方法实现
@@ -318,14 +329,14 @@ func (psm *ProcessSafetyManager) Lock() error {
 		data, err := os.ReadFile(psm.lockFile)
 		if err == nil {
 			pid := strings.TrimSpace(string(data))
-			return fmt.Errorf("程序已在运行 (PID: %s)", pid)
+			return fmt.Errorf(i18n.T("err.already_running"), pid)
 		}
 	}
 
 	// 创建锁文件
 	pid := fmt.Sprintf("%d", os.Getpid())
 	if err := os.WriteFile(psm.lockFile, []byte(pid), 0644); err != nil {
-		return fmt.Errorf("创建锁文件失败: %v", err)
+		return fmt.Errorf(i18n.T("err.create_lock"), err)
 	}
 
 	psm.isLocked = true
@@ -346,7 +357,7 @@ func (psm *ProcessSafetyManager) Unlock() error {
 
 	// 删除锁文件
 	if err := os.Remove(psm.lockFile); err != nil && !os.IsNotExist(err) {
-		return fmt.Errorf("删除锁文件失败: %v", err)
+		return fmt.Errorf(i18n.T("err.delete_lock"), err)
 	}
 
 	psm.isLocked = false
@@ -415,7 +426,7 @@ func (nm *NetworkManager) DoWithRetry(req *http.Request) (*http.Response, error)
 		break
 	}
 
-	return nil, fmt.Errorf("请求失败 (重试%d次): %v", nm.retryCount, lastErr)
+	return nil, fmt.Errorf(i18n.T("err.request_failed"), nm.retryCount, lastErr)
 }
 
 // isNetworkError 判断是否是网络错误
@@ -479,12 +490,12 @@ func (c *Config) applyRequestHeaders(req *http.Request) {
 
 func replaceEndpoint(baseURL, target, replacement string) (string, error) {
 	if baseURL == "" {
-		return "", fmt.Errorf("基础URL为空，无法构建API端点")
+		return "", fmt.Errorf(i18n.T("err.empty_base_url"))
 	}
 
 	parsedURL, err := url.Parse(baseURL)
 	if err != nil {
-		return "", fmt.Errorf("无法解析基础URL %q: %w", baseURL, err)
+		return "", fmt.Errorf(i18n.T("err.parse_url"), baseURL, err)
 	}
 
 	normalizePath := func(p string) string {
@@ -512,16 +523,16 @@ func replaceEndpoint(baseURL, target, replacement string) (string, error) {
 
 	targetPath := normalizePath(target)
 	if targetPath == "" {
-		return "", fmt.Errorf("目标路径为空，无法构建API端点")
+		return "", fmt.Errorf(i18n.T("err.empty_target_path"))
 	}
 	replacementPath := normalizePath(replacement)
 	if replacementPath == "" {
-		return "", fmt.Errorf("替换路径为空，无法构建API端点")
+		return "", fmt.Errorf(i18n.T("err.empty_replace_path"))
 	}
 
 	updatedPath := strings.Replace(currentPath, targetPath, replacementPath, 1)
 	if updatedPath == currentPath {
-		return "", fmt.Errorf("基础URL %q 未包含期望的路径片段 %q", baseURL, targetPath)
+		return "", fmt.Errorf(i18n.T("err.path_not_found"), baseURL, targetPath)
 	}
 
 	parsedURL.Path = updatedPath
@@ -535,7 +546,7 @@ func readResponseBody(resp *http.Response) ([]byte, error) {
 	if strings.Contains(resp.Header.Get("Content-Encoding"), "gzip") {
 		gzipReader, err := gzip.NewReader(resp.Body)
 		if err != nil {
-			return nil, fmt.Errorf("无法创建 gzip reader: %w", err)
+			return nil, fmt.Errorf(i18n.T("err.gzip_reader"), err)
 		}
 		defer gzipReader.Close()
 		reader = gzipReader
@@ -543,7 +554,7 @@ func readResponseBody(resp *http.Response) ([]byte, error) {
 
 	body, err := io.ReadAll(reader)
 	if err != nil {
-		return nil, fmt.Errorf("无法读取响应: %w", err)
+		return nil, fmt.Errorf(i18n.T("err.read_response"), err)
 	}
 
 	return body, nil
@@ -662,7 +673,7 @@ type APIError struct {
 func loadConfig(filename string) (*Config, error) {
 	file, err := os.Open(filename)
 	if err != nil {
-		return nil, fmt.Errorf("无法打开配置文件: %v", err)
+		return nil, fmt.Errorf(i18n.T("err.open_config"), err)
 	}
 	defer file.Close()
 
@@ -680,7 +691,7 @@ func generateHME(config *Config) (string, error) {
 	// 构建 /generate 接口的 URL
 	generateURL, err := replaceEndpoint(config.BaseURL, "/reserve", "/generate")
 	if err != nil {
-		return "", fmt.Errorf("无法构建 generate 接口: %w", err)
+		return "", fmt.Errorf(i18n.T("err.build_api"), "generate", err)
 	}
 	url := fmt.Sprintf("%s?clientBuildNumber=%s&clientMasteringNumber=%s&clientId=%s&dsid=%s",
 		generateURL,
@@ -696,13 +707,13 @@ func generateHME(config *Config) (string, error) {
 	}
 	jsonData, err := json.Marshal(reqBody)
 	if err != nil {
-		return "", fmt.Errorf("无法序列化请求体: %v", err)
+		return "", fmt.Errorf(i18n.T("err.serialize_body"), err)
 	}
 
 	// 创建HTTP请求
 	req, err := http.NewRequest("POST", url, bytes.NewBuffer(jsonData))
 	if err != nil {
-		return "", fmt.Errorf("无法创建请求: %v", err)
+		return "", fmt.Errorf(i18n.T("err.create_request"), err)
 	}
 
 	config.applyRequestHeaders(req)
@@ -713,7 +724,7 @@ func generateHME(config *Config) (string, error) {
 	// 发送请求
 	resp, err := config.httpClient().Do(req)
 	if err != nil {
-		return "", fmt.Errorf("请求失败: %v", err)
+		return "", fmt.Errorf(i18n.T("err.network_failed"), err)
 	}
 
 	body, err := readResponseBody(resp)
@@ -723,18 +734,18 @@ func generateHME(config *Config) (string, error) {
 
 	// 检查HTTP状态码
 	if resp.StatusCode != http.StatusOK {
-		return "", fmt.Errorf("API返回错误状态码: %d, 响应: %s", resp.StatusCode, strings.TrimSpace(string(body)))
+		return "", fmt.Errorf(i18n.T("err.api_status"), resp.StatusCode, strings.TrimSpace(string(body)))
 	}
 
 	// 解析响应
 	var response GenerateResponse
 	if err := json.Unmarshal(body, &response); err != nil {
-		return "", fmt.Errorf("无法解析响应: %v, 原始响应: %s", err, strings.TrimSpace(string(body)))
+		return "", fmt.Errorf(i18n.T("err.parse_response"), err, strings.TrimSpace(string(body)))
 	}
 
 	// 检查是否成功
 	if !response.Success {
-		return "", fmt.Errorf("API返回失败: %s", strings.TrimSpace(string(body)))
+		return "", fmt.Errorf(i18n.T("err.api_failed"), strings.TrimSpace(string(body)))
 	}
 
 	return response.Result.HME, nil
@@ -1208,7 +1219,7 @@ func generateSmartEmail(config *Config, label string) (*EmailQualityResult, erro
 	var bestEmail string
 	var bestScore int
 
-	printSubHeader("智能邮箱生成")
+	printSubHeader(i18n.T("smart.execution"))
 	fmt.Printf("  "+ColorCyan+"目标分数:"+ColorReset+" %d+ "+ColorDim+"|"+ColorReset+" "+ColorCyan+"最大尝试:"+ColorReset+" %d 次\n\n", qualityConfig.MinScore, maxTries)
 
 	for i := 1; i <= maxTries; i++ {
@@ -1258,7 +1269,7 @@ func generateSmartEmail(config *Config, label string) (*EmailQualityResult, erro
 			// 确认创建邮箱
 			finalEmail, err := reserveHME(config, email, label)
 			if err != nil {
-				return nil, fmt.Errorf("确认创建邮箱失败: %v", err)
+				return nil, fmt.Errorf(i18n.T("err.confirm_failed"), err)
 			}
 
 			return &EmailQualityResult{
@@ -1291,10 +1302,10 @@ func generateSmartEmail(config *Config, label string) (*EmailQualityResult, erro
 // 手动选择邮箱
 func selectEmailManually(result *EmailQualityResult, config *Config, label string) (string, error) {
 	if len(result.Candidates) == 0 {
-		return "", fmt.Errorf("没有可选择的邮箱")
+		return "", fmt.Errorf(i18n.T("err.no_candidates"))
 	}
 
-	printSubHeader("邮箱选择")
+	printSubHeader(i18n.T("label.email"))
 	fmt.Printf("  "+ColorBold+"共生成 %d 个邮箱"+ColorReset+" "+ColorDim+"(推荐: ID%d)"+ColorReset+"\n\n", len(result.Candidates), getBestCandidateID(result.Candidates))
 
 	// 显示所有候选邮箱
@@ -1329,7 +1340,7 @@ func selectEmailManually(result *EmailQualityResult, config *Config, label strin
 
 	// 用户选择
 	printInfo("输入 ID 选择邮箱 (1-3)，或输入 'auto' 自动选择最佳")
-	input := readInput("选择: ")
+	input := readInput(i18n.T("msg.choice_prompt") + ": ")
 	input = strings.TrimSpace(strings.ToLower(input))
 
 	var selectedEmail string
@@ -1339,7 +1350,7 @@ func selectEmailManually(result *EmailQualityResult, config *Config, label strin
 	} else {
 		id, err := strconv.Atoi(input)
 		if err != nil || id < 1 || id > len(result.Candidates) {
-			return "", fmt.Errorf("无效的选择: %s", input)
+			return "", fmt.Errorf(i18n.T("err.invalid_choice"), input)
 		}
 
 		// 找到对应ID的邮箱
@@ -1352,7 +1363,7 @@ func selectEmailManually(result *EmailQualityResult, config *Config, label strin
 		}
 
 		if selectedEmail == "" {
-			return "", fmt.Errorf("找不到 ID%d 对应的邮箱", id)
+			return "", fmt.Errorf(i18n.T("err.candidate_not_found"), id)
 		}
 	}
 
@@ -1361,7 +1372,7 @@ func selectEmailManually(result *EmailQualityResult, config *Config, label strin
 	finalEmail, err := reserveHME(config, selectedEmail, label)
 	if err != nil {
 		fmt.Printf(ColorRed + "[!]" + ColorReset + "\n")
-		return "", fmt.Errorf("确认创建邮箱失败: %v", err)
+		return "", fmt.Errorf(i18n.T("err.confirm_failed"), err)
 	}
 	fmt.Printf(ColorGreen + "[+]" + ColorReset + "\n")
 
@@ -1440,13 +1451,13 @@ func reserveHME(config *Config, hme string, label string) (string, error) {
 	}
 	jsonData, err := json.Marshal(reqBody)
 	if err != nil {
-		return "", fmt.Errorf("无法序列化请求体: %v", err)
+		return "", fmt.Errorf(i18n.T("err.serialize_body"), err)
 	}
 
 	// 创建HTTP请求
 	req, err := http.NewRequest("POST", url, bytes.NewBuffer(jsonData))
 	if err != nil {
-		return "", fmt.Errorf("无法创建请求: %v", err)
+		return "", fmt.Errorf(i18n.T("err.create_request"), err)
 	}
 
 	config.applyRequestHeaders(req)
@@ -1457,7 +1468,7 @@ func reserveHME(config *Config, hme string, label string) (string, error) {
 	// 发送请求
 	resp, err := config.httpClient().Do(req)
 	if err != nil {
-		return "", fmt.Errorf("请求失败: %v", err)
+		return "", fmt.Errorf(i18n.T("err.network_failed"), err)
 	}
 
 	body, err := readResponseBody(resp)
@@ -1467,18 +1478,18 @@ func reserveHME(config *Config, hme string, label string) (string, error) {
 
 	// 检查HTTP状态码
 	if resp.StatusCode != http.StatusOK {
-		return "", fmt.Errorf("API返回错误状态码: %d, 响应: %s", resp.StatusCode, strings.TrimSpace(string(body)))
+		return "", fmt.Errorf(i18n.T("err.api_status"), resp.StatusCode, strings.TrimSpace(string(body)))
 	}
 
 	// 解析响应
 	var response ReserveResponse
 	if err := json.Unmarshal(body, &response); err != nil {
-		return "", fmt.Errorf("无法解析响应: %v, 原始响应: %s", err, strings.TrimSpace(string(body)))
+		return "", fmt.Errorf(i18n.T("err.parse_response"), err, strings.TrimSpace(string(body)))
 	}
 
 	// 检查是否成功
 	if !response.Success {
-		return "", fmt.Errorf("API返回失败: %s", strings.TrimSpace(string(body)))
+		return "", fmt.Errorf(i18n.T("err.api_failed"), strings.TrimSpace(string(body)))
 	}
 
 	// 返回实际的邮箱地址 - 注意是 result.hme.hme
@@ -1490,13 +1501,13 @@ func createHME(config *Config, label string) (string, error) {
 	// 第1步：生成邮箱地址
 	hme, err := generateHME(config)
 	if err != nil {
-		return "", fmt.Errorf("生成邮箱地址失败: %v", err)
+		return "", fmt.Errorf(i18n.T("err.network_failed"), err)
 	}
 
 	// 第2步：确认创建并设置 label
 	finalHME, err := reserveHME(config, hme, label)
 	if err != nil {
-		return "", fmt.Errorf("确认创建邮箱失败: %v", err)
+		return "", fmt.Errorf(i18n.T("err.confirm_failed"), err)
 	}
 
 	return finalHME, nil
@@ -1507,7 +1518,7 @@ func listHME(config *Config) ([]HMEEmail, error) {
 	// 构建 /list 接口的 URL
 	listURL, err := replaceEndpoint(config.BaseURL, "/v1/hme/reserve", "/v2/hme/list")
 	if err != nil {
-		return nil, fmt.Errorf("无法构建 list 接口: %w", err)
+		return nil, fmt.Errorf(i18n.T("err.build_api"), "list", err)
 	}
 	url := fmt.Sprintf("%s?clientBuildNumber=%s&clientMasteringNumber=%s&clientId=%s&dsid=%s",
 		listURL,
@@ -1520,7 +1531,7 @@ func listHME(config *Config) ([]HMEEmail, error) {
 	// 创建HTTP请求
 	req, err := http.NewRequest("GET", url, nil)
 	if err != nil {
-		return nil, fmt.Errorf("无法创建请求: %v", err)
+		return nil, fmt.Errorf(i18n.T("err.create_request"), err)
 	}
 
 	config.applyRequestHeaders(req)
@@ -1528,7 +1539,7 @@ func listHME(config *Config) ([]HMEEmail, error) {
 	// 发送请求
 	resp, err := config.httpClient().Do(req)
 	if err != nil {
-		return nil, fmt.Errorf("网络请求失败: %v", err)
+		return nil, fmt.Errorf(i18n.T("err.network_failed"), err)
 	}
 
 	body, err := readResponseBody(resp)
@@ -1537,19 +1548,19 @@ func listHME(config *Config) ([]HMEEmail, error) {
 	}
 
 	if resp.StatusCode != http.StatusOK {
-		return nil, fmt.Errorf("服务器返回错误 (状态码: %d, 响应: %s)", resp.StatusCode, strings.TrimSpace(string(body)))
+		return nil, fmt.Errorf(i18n.T("err.api_status"), resp.StatusCode, strings.TrimSpace(string(body)))
 	}
 
 	var response ListResponse
 	if err := json.Unmarshal(body, &response); err != nil {
-		return nil, fmt.Errorf("解析响应失败: %v, 原始响应: %s", err, strings.TrimSpace(string(body)))
+		return nil, fmt.Errorf(i18n.T("err.parse_response"), err, strings.TrimSpace(string(body)))
 	}
 
 	if !response.Success {
 		if response.Error != nil {
 			return nil, fmt.Errorf("API错误: %s", response.Error.ErrorMessage)
 		}
-		return nil, fmt.Errorf("获取列表失败")
+		return nil, fmt.Errorf(i18n.T("err.api_failed"), "")
 	}
 
 	return response.Result.HMEEmails, nil
@@ -1560,7 +1571,7 @@ func deactivateHME(config *Config, anonymousID string) error {
 	// 构建 /deactivate 接口的 URL
 	deactivateURL, err := replaceEndpoint(config.BaseURL, "/reserve", "/deactivate")
 	if err != nil {
-		return fmt.Errorf("无法构建 deactivate 接口: %w", err)
+		return fmt.Errorf(i18n.T("err.build_api"), "deactivate", err)
 	}
 	url := fmt.Sprintf("%s?clientBuildNumber=%s&clientMasteringNumber=%s&clientId=%s&dsid=%s",
 		deactivateURL,
@@ -1574,12 +1585,12 @@ func deactivateHME(config *Config, anonymousID string) error {
 	reqBody := DeactivateRequest{AnonymousID: anonymousID}
 	jsonData, err := json.Marshal(reqBody)
 	if err != nil {
-		return fmt.Errorf("序列化请求失败: %v", err)
+		return fmt.Errorf(i18n.T("err.serialize_body"), err)
 	}
 
 	req, err := http.NewRequest("POST", url, bytes.NewBuffer(jsonData))
 	if err != nil {
-		return fmt.Errorf("创建请求失败: %v", err)
+		return fmt.Errorf(i18n.T("err.create_request"), err)
 	}
 
 	config.applyRequestHeaders(req)
@@ -1589,7 +1600,7 @@ func deactivateHME(config *Config, anonymousID string) error {
 
 	resp, err := config.httpClient().Do(req)
 	if err != nil {
-		return fmt.Errorf("网络请求失败: %v", err)
+		return fmt.Errorf(i18n.T("err.network_failed"), err)
 	}
 
 	body, err := readResponseBody(resp)
@@ -1598,19 +1609,19 @@ func deactivateHME(config *Config, anonymousID string) error {
 	}
 
 	if resp.StatusCode != http.StatusOK {
-		return fmt.Errorf("服务器返回错误 (状态码: %d, 响应: %s)", resp.StatusCode, strings.TrimSpace(string(body)))
+		return fmt.Errorf(i18n.T("err.api_status"), resp.StatusCode, strings.TrimSpace(string(body)))
 	}
 
 	var response DeactivateResponse
 	if err := json.Unmarshal(body, &response); err != nil {
-		return fmt.Errorf("解析响应失败: %v, 原始响应: %s", err, strings.TrimSpace(string(body)))
+		return fmt.Errorf(i18n.T("err.parse_response"), err, strings.TrimSpace(string(body)))
 	}
 
 	if !response.Success {
 		if response.Error != nil {
 			return fmt.Errorf("API错误: %s", response.Error.ErrorMessage)
 		}
-		return fmt.Errorf("停用失败")
+		return fmt.Errorf(i18n.T("err.api_failed"), "")
 	}
 
 	return nil
@@ -1621,7 +1632,7 @@ func permanentDeleteHME(config *Config, anonymousID string) error {
 	// 构建 /delete 接口的 URL
 	deleteURL, err := replaceEndpoint(config.BaseURL, "/v1/hme/reserve", "/v1/hme/delete")
 	if err != nil {
-		return fmt.Errorf("无法构建 delete 接口: %w", err)
+		return fmt.Errorf(i18n.T("err.build_api"), "delete", err)
 	}
 	url := fmt.Sprintf("%s?clientBuildNumber=%s&clientMasteringNumber=%s&clientId=%s&dsid=%s",
 		deleteURL,
@@ -1635,12 +1646,12 @@ func permanentDeleteHME(config *Config, anonymousID string) error {
 	reqBody := PermanentDeleteRequest{AnonymousID: anonymousID}
 	jsonData, err := json.Marshal(reqBody)
 	if err != nil {
-		return fmt.Errorf("序列化请求失败: %v", err)
+		return fmt.Errorf(i18n.T("err.serialize_body"), err)
 	}
 
 	req, err := http.NewRequest("POST", url, bytes.NewBuffer(jsonData))
 	if err != nil {
-		return fmt.Errorf("创建请求失败: %v", err)
+		return fmt.Errorf(i18n.T("err.create_request"), err)
 	}
 
 	config.applyRequestHeaders(req)
@@ -1650,7 +1661,7 @@ func permanentDeleteHME(config *Config, anonymousID string) error {
 
 	resp, err := config.httpClient().Do(req)
 	if err != nil {
-		return fmt.Errorf("网络请求失败: %v", err)
+		return fmt.Errorf(i18n.T("err.network_failed"), err)
 	}
 
 	body, err := readResponseBody(resp)
@@ -1659,19 +1670,19 @@ func permanentDeleteHME(config *Config, anonymousID string) error {
 	}
 
 	if resp.StatusCode != http.StatusOK {
-		return fmt.Errorf("服务器返回错误 (状态码: %d, 响应: %s)", resp.StatusCode, strings.TrimSpace(string(body)))
+		return fmt.Errorf(i18n.T("err.api_status"), resp.StatusCode, strings.TrimSpace(string(body)))
 	}
 
 	var response PermanentDeleteResponse
 	if err := json.Unmarshal(body, &response); err != nil {
-		return fmt.Errorf("解析响应失败: %v, 原始响应: %s", err, strings.TrimSpace(string(body)))
+		return fmt.Errorf(i18n.T("err.parse_response"), err, strings.TrimSpace(string(body)))
 	}
 
 	if !response.Success {
 		if response.Error != nil {
 			return fmt.Errorf("API错误: %s", response.Error.ErrorMessage)
 		}
-		return fmt.Errorf("彻底删除失败")
+		return fmt.Errorf(i18n.T("err.api_failed"), "")
 	}
 
 	return nil
@@ -1682,7 +1693,7 @@ func reactivateHME(config *Config, anonymousID string) error {
 	// 构建 /reactivate 接口的 URL
 	reactivateURL, err := replaceEndpoint(config.BaseURL, "/v1/hme/reserve", "/v1/hme/reactivate")
 	if err != nil {
-		return fmt.Errorf("无法构建 reactivate 接口: %w", err)
+		return fmt.Errorf(i18n.T("err.build_api"), "reactivate", err)
 	}
 	url := fmt.Sprintf("%s?clientBuildNumber=%s&clientMasteringNumber=%s&clientId=%s&dsid=%s",
 		reactivateURL,
@@ -1696,12 +1707,12 @@ func reactivateHME(config *Config, anonymousID string) error {
 	reqBody := ReactivateRequest{AnonymousID: anonymousID}
 	jsonData, err := json.Marshal(reqBody)
 	if err != nil {
-		return fmt.Errorf("序列化请求失败: %v", err)
+		return fmt.Errorf(i18n.T("err.serialize_body"), err)
 	}
 
 	req, err := http.NewRequest("POST", url, bytes.NewBuffer(jsonData))
 	if err != nil {
-		return fmt.Errorf("创建请求失败: %v", err)
+		return fmt.Errorf(i18n.T("err.create_request"), err)
 	}
 
 	config.applyRequestHeaders(req)
@@ -1711,7 +1722,7 @@ func reactivateHME(config *Config, anonymousID string) error {
 
 	resp, err := config.httpClient().Do(req)
 	if err != nil {
-		return fmt.Errorf("网络请求失败: %v", err)
+		return fmt.Errorf(i18n.T("err.network_failed"), err)
 	}
 
 	body, err := readResponseBody(resp)
@@ -1720,19 +1731,19 @@ func reactivateHME(config *Config, anonymousID string) error {
 	}
 
 	if resp.StatusCode != http.StatusOK {
-		return fmt.Errorf("服务器返回错误 (状态码: %d, 响应: %s)", resp.StatusCode, strings.TrimSpace(string(body)))
+		return fmt.Errorf(i18n.T("err.api_status"), resp.StatusCode, strings.TrimSpace(string(body)))
 	}
 
 	var response ReactivateResponse
 	if err := json.Unmarshal(body, &response); err != nil {
-		return fmt.Errorf("解析响应失败: %v, 原始响应: %s", err, strings.TrimSpace(string(body)))
+		return fmt.Errorf(i18n.T("err.parse_response"), err, strings.TrimSpace(string(body)))
 	}
 
 	if !response.Success {
 		if response.Error != nil {
 			return fmt.Errorf("API错误: %s", response.Error.ErrorMessage)
 		}
-		return fmt.Errorf("重新激活失败")
+		return fmt.Errorf(i18n.T("err.api_failed"), "")
 	}
 
 	return nil
@@ -1741,13 +1752,13 @@ func reactivateHME(config *Config, anonymousID string) error {
 // 批量创建邮箱地址
 func batchGenerate(config *Config, count int, labelPrefix string) ([]string, []error) {
 	if count <= 0 {
-		return nil, []error{fmt.Errorf("批量创建数量必须大于 0")}
+		return nil, []error{fmt.Errorf(i18n.T("err.batch_count"))}
 	}
 
 	emails := make([]string, 0, count)
 	errs := make([]error, 0, count)
 
-	printSubHeader("批量创建执行中")
+	printSubHeader(i18n.T("batch.execution"))
 	fmt.Printf("  "+ColorCyan+"数量:"+ColorReset+" %d "+ColorDim+"|"+ColorReset+" "+ColorCyan+"标签:"+ColorReset+" %s*\n\n", count, labelPrefix)
 
 	for i := 0; i < count; i++ {
@@ -2041,23 +2052,23 @@ func saveEmailsToFile(emails []string, filename string) {
 
 // 显示主菜单
 func showMainMenu() {
-	printHeader("iCloud 隐藏邮箱管理工具")
+	printHeader(i18n.T("header.main"))
 
-	fmt.Println("  " + ColorGreen + "[1]" + ColorReset + " 查看邮箱列表")
-	fmt.Println("  " + ColorBlue + "[2]" + ColorReset + " 创建新邮箱 " + ColorDim + "(普通模式)" + ColorReset)
-	fmt.Println("  " + ColorBrightBlue + "[3]" + ColorReset + " 智能创建邮箱 " + ColorBrightGreen + "(推荐)" + ColorReset)
-	fmt.Println("  " + ColorYellow + "[4]" + ColorReset + " 停用邮箱")
-	fmt.Println("  " + ColorMagenta + "[5]" + ColorReset + " 批量创建邮箱")
-	fmt.Println("  " + ColorRed + "[6]" + ColorReset + " 彻底删除停用的邮箱 " + ColorDim + "(不可恢复)" + ColorReset)
-	fmt.Println("  " + ColorCyan + "[7]" + ColorReset + " 重新激活停用的邮箱")
-	fmt.Println("  " + ColorBrightMagenta + "[8]" + ColorReset + " 程序设置")
+	fmt.Println("  " + ColorGreen + "[1]" + ColorReset + " " + i18n.T("menu.list"))
+	fmt.Println("  " + ColorBlue + "[2]" + ColorReset + " " + i18n.T("menu.create") + " " + ColorDim + i18n.T("menu.create_normal") + ColorReset)
+	fmt.Println("  " + ColorBrightBlue + "[3]" + ColorReset + " " + i18n.T("menu.smart_create") + " " + ColorBrightGreen + i18n.T("menu.recommended") + ColorReset)
+	fmt.Println("  " + ColorYellow + "[4]" + ColorReset + " " + i18n.T("menu.deactivate"))
+	fmt.Println("  " + ColorMagenta + "[5]" + ColorReset + " " + i18n.T("menu.batch_create"))
+	fmt.Println("  " + ColorRed + "[6]" + ColorReset + " " + i18n.T("menu.delete") + " " + ColorDim + i18n.T("menu.unrecoverable") + ColorReset)
+	fmt.Println("  " + ColorCyan + "[7]" + ColorReset + " " + i18n.T("menu.reactivate"))
+	fmt.Println("  " + ColorBrightMagenta + "[8]" + ColorReset + " " + i18n.T("menu.settings"))
 
 	// 开发者模式下显示测试选项
 	config := getCurrentConfig()
 	if config != nil && config.DeveloperMode {
-		fmt.Println("  " + ColorGray + "[9]" + ColorReset + " 测试评分算法 " + ColorDim + "(开发调试)" + ColorReset)
+		fmt.Println("  " + ColorGray + "[9]" + ColorReset + " " + i18n.T("menu.test_scoring") + " " + ColorDim + i18n.T("menu.dev_debug") + ColorReset)
 	}
-	fmt.Println("  " + ColorDim + "[0]" + ColorReset + " 退出 " + ColorDim + "(或输入 q/quit/exit)" + ColorReset)
+	fmt.Println("  " + ColorDim + "[0]" + ColorReset + " " + i18n.T("menu.exit") + " " + ColorDim + i18n.T("menu.exit_hint") + ColorReset)
 
 	printSeparator()
 	fmt.Println()
@@ -2065,19 +2076,19 @@ func showMainMenu() {
 
 // 查看邮箱列表
 func handleListEmails(config *Config) {
-	printHeader("邮箱列表")
+	printHeader(i18n.T("header.email_list"))
 	var emails []HMEEmail
-	if err := withSpinner("获取邮箱列表", func() error {
+	if err := withSpinner(i18n.T("action.loading"), func() error {
 		var err error
 		emails, err = listHME(config)
 		return err
 	}); err != nil {
-		printError(fmt.Sprintf("获取列表失败: %v", err))
+		printError(fmt.Sprintf(i18n.T("err.api_failed"), err))
 		return
 	}
 
 	if len(emails) == 0 {
-		printInfo("暂无邮箱")
+		printInfo(i18n.T("msg.no_emails"))
 		return
 	}
 
@@ -2121,11 +2132,11 @@ func handleListEmails(config *Config) {
 
 // 创建单个邮箱
 func handleCreateEmail(config *Config) {
-	printHeader("创建新邮箱")
+	printHeader(i18n.T("header.create_email"))
 
-	label := readInput("邮箱标签: ")
+	label := readInput(i18n.T("prompt.email_label") + ": ")
 	if label == "" {
-		printError("标签不能为空")
+		printError(i18n.T("msg.label_required"))
 		return
 	}
 
@@ -2145,7 +2156,7 @@ func handleCreateEmail(config *Config) {
 	}
 
 	fmt.Println()
-	printSuccess("邮箱创建成功")
+	printSuccess(i18n.T("msg.create_success"))
 	fmt.Printf("\n  "+ColorBrightMagenta+"@ 邮箱: "+ColorReset+ColorBold+ColorBrightWhite+"%s"+ColorReset+"\n", email)
 	fmt.Printf("  "+ColorBrightBlue+"# 标签: "+ColorReset+ColorCyan+"%s"+ColorReset+"\n", label)
 	fmt.Printf("  "+ColorBrightGreen+"& 时间: "+ColorReset+ColorGreen+"%s"+ColorReset+"\n", time.Now().Format("2006-01-02 15:04"))
@@ -2153,7 +2164,7 @@ func handleCreateEmail(config *Config) {
 
 // 智能创建邮箱
 func handleSmartCreateEmail(config *Config) {
-	printHeader("智能创建邮箱")
+	printHeader(i18n.T("header.smart_create"))
 
 	// 显示当前设置
 	fmt.Printf("  " + ColorBold + "当前设置" + ColorReset + "\n\n")
@@ -2163,9 +2174,9 @@ func handleSmartCreateEmail(config *Config) {
 	fmt.Printf("  "+ColorCyan+"显示详分:"+ColorReset+" %v\n", config.EmailQuality.ShowScores)
 	fmt.Println()
 
-	label := readInput("邮箱标签: ")
+	label := readInput(i18n.T("prompt.email_label") + ": ")
 	if label == "" {
-		printError("标签不能为空")
+		printError(i18n.T("msg.label_required"))
 		return
 	}
 
@@ -2218,18 +2229,19 @@ func handleSmartCreateEmail(config *Config) {
 // 程序设置
 func handleProgramSettings(config *Config) {
 	for {
-		printHeader("程序设置")
+		printHeader(i18n.T("header.settings"))
 
-		fmt.Printf("  " + ColorBold + "当前配置" + ColorReset + "\n\n")
-		fmt.Printf("  " + ColorGreen + "[1]" + ColorReset + " 邮箱质量设置\n")
-		fmt.Printf("  " + ColorBlue + "[2]" + ColorReset + " 邮箱保存设置\n")
-		fmt.Printf("  "+ColorYellow+"[3]"+ColorReset+" 开发者模式: %s\n", formatBoolSetting(config.DeveloperMode))
-		fmt.Printf("  " + ColorDim + "[0]" + ColorReset + " 返回主菜单\n")
+		fmt.Printf("  " + ColorBold + i18n.T("settings.current") + ColorReset + "\n\n")
+		fmt.Printf("  " + ColorGreen + "[1]" + ColorReset + " " + i18n.T("settings.quality") + "\n")
+		fmt.Printf("  " + ColorBlue + "[2]" + ColorReset + " " + i18n.T("settings.save") + "\n")
+		fmt.Printf("  "+ColorYellow+"[3]"+ColorReset+" " + i18n.T("settings.dev_mode") + ": %s\n", formatBoolSetting(config.DeveloperMode))
+		fmt.Printf("  "+ColorMagenta+"[4]"+ColorReset+" " + i18n.T("settings.language") + "\n")
+		fmt.Printf("  " + ColorDim + "[0]" + ColorReset + " " + i18n.T("settings.return") + "\n")
 
 		printSeparator()
 		fmt.Println()
 
-		choice := readInput("选择设置项 (0-3): ")
+		choice := readInput(i18n.T("prompt.select_option", 4) + ": ")
 		choice = strings.TrimSpace(choice)
 
 		switch choice {
@@ -2239,14 +2251,16 @@ func handleProgramSettings(config *Config) {
 			handleEmailSaveSettings(config)
 		case "3":
 			config.DeveloperMode = !config.DeveloperMode
-			saveConfigWithMessage(config, fmt.Sprintf("开发者模式已设置为: %v", config.DeveloperMode))
+			saveConfigWithMessage(config, i18n.T("config.setting_changed", i18n.T("settings.dev_mode"), config.DeveloperMode))
+		case "4":
+			handleLanguageSettings(config)
 		case "0":
 			return
 		default:
-			printError("无效选择，请输入 0-3")
+			printError(i18n.T("error.invalid_choice", "0-4"))
 		}
 
-		fmt.Print("\n  " + ColorDim + "按回车键继续..." + ColorReset)
+		fmt.Print("\n  " + ColorDim + i18n.T("prompt.continue") + ColorReset)
 		readInput("")
 	}
 }
@@ -2254,7 +2268,7 @@ func handleProgramSettings(config *Config) {
 // 邮箱质量设置
 func handleEmailQualitySettings(config *Config) {
 	for {
-		printHeader("邮箱质量设置")
+		printHeader(i18n.T("header.quality_settings"))
 
 		fmt.Printf("  " + ColorBold + "当前配置" + ColorReset + "\n\n")
 		fmt.Printf("  "+ColorGreen+"[1]"+ColorReset+" 自动选择: %s\n", formatBoolSetting(config.EmailQuality.AutoSelect))
@@ -2318,11 +2332,78 @@ func handleEmailQualitySettings(config *Config) {
 }
 
 // 格式化布尔设置显示
+// 语言设置
+func handleLanguageSettings(config *Config) {
+	for {
+		printHeader(i18n.T("settings.language"))
+
+		// 获取当前语言的显示名称
+		var currentLangName string
+		switch config.Language {
+		case "zh", "zh-CN", "zh-TW":
+			currentLangName = i18n.T("lang.chinese")
+		case "en", "en-US", "en-GB":
+			currentLangName = i18n.T("lang.english")
+		case "de", "de-DE":
+			currentLangName = i18n.T("lang.german")
+		default:
+			currentLangName = config.Language
+		}
+
+		fmt.Printf("  " + ColorBold + i18n.T("lang.current") + ColorReset + ": " + ColorCyan + currentLangName + ColorReset + "\n\n")
+		fmt.Println("  " + ColorBold + i18n.T("lang.select_prompt") + ColorReset + "\n")
+		fmt.Printf("  " + ColorGreen + "[1]" + ColorReset + " " + i18n.T("lang.chinese") + "\n")
+		fmt.Printf("  " + ColorBlue + "[2]" + ColorReset + " " + i18n.T("lang.english") + "\n")
+		fmt.Printf("  " + ColorYellow + "[3]" + ColorReset + " " + i18n.T("lang.german") + "\n")
+		fmt.Printf("  " + ColorDim + "[0]" + ColorReset + " " + i18n.T("settings.return_parent") + "\n")
+
+		printSeparator()
+		fmt.Println()
+
+		choice := readInput(i18n.T("prompt.select_option", 3) + ": ")
+		choice = strings.TrimSpace(choice)
+
+		var newLang string
+		var langName string
+
+		switch choice {
+		case "1":
+			newLang = "zh"
+			langName = "中文"
+		case "2":
+			newLang = "en"
+			langName = "English"
+		case "3":
+			newLang = "de"
+			langName = "Deutsch"
+		case "0":
+			return
+		default:
+			printError(i18n.T("error.invalid_choice", "0-3"))
+			fmt.Print("\n  " + ColorDim + i18n.T("prompt.continue") + ColorReset)
+			readInput("")
+			continue
+		}
+
+		// 更新配置并立即切换语言
+		config.Language = newLang
+		i18n.SetLanguage(newLang)
+
+		// 保存配置
+		saveConfigWithMessage(config, i18n.T("lang.changed", langName))
+		printInfo(i18n.T("lang.restart_note"))
+
+		fmt.Print("\n  " + ColorDim + i18n.T("prompt.continue") + ColorReset)
+		readInput("")
+		return // 返回上级菜单，让界面刷新
+	}
+}
+
 func formatBoolSetting(value bool) string {
 	if value {
-		return ColorGreen + "启用" + ColorReset
+		return ColorGreen + i18n.T("status.enabled") + ColorReset
 	}
-	return ColorRed + "禁用" + ColorReset
+	return ColorRed + i18n.T("status.disabled") + ColorReset
 }
 
 // 保存邮箱到文件
@@ -2352,7 +2433,7 @@ func saveEmailToFile(config *Config, email, label string) error {
 // 邮箱保存设置
 func handleEmailSaveSettings(config *Config) {
 	for {
-		printHeader("邮箱保存设置")
+		printHeader(i18n.T("header.save_settings"))
 
 		fmt.Printf("  " + ColorBold + "当前配置" + ColorReset + "\n\n")
 		fmt.Printf("  "+ColorGreen+"[1]"+ColorReset+" 保存生成的邮箱: %s\n", formatBoolSetting(config.SaveGeneratedEmails))
@@ -2392,7 +2473,7 @@ func handleEmailSaveSettings(config *Config) {
 // 权重设置
 func handleWeightSettings(config *Config) {
 	for {
-		printHeader("评分权重设置")
+		printHeader(i18n.T("header.weight_settings"))
 
 		weights := &config.EmailQuality.Weights
 		total := weights.PrefixStructure + weights.Length + weights.Readability + weights.Security
@@ -2482,7 +2563,7 @@ func resetToDefaults(config *Config) {
 
 // 停用邮箱
 func handleDeleteEmails(config *Config) {
-	printHeader("停用邮箱")
+	printHeader(i18n.T("header.deactivate"))
 	var emails []HMEEmail
 	if err := withSpinner("正在获取邮箱列表", func() error {
 		var err error
@@ -2515,10 +2596,10 @@ func handleDeleteEmails(config *Config) {
 	}
 
 	printInfo("输入序号 (逗号分隔，如: 1,3,5)")
-	input := readInput("序号: ")
+	input := readInput(i18n.T("prompt.index") + ": ")
 
 	if input == "" {
-		printInfo("已取消")
+		printInfo(i18n.T("msg.cancelled"))
 		return
 	}
 
@@ -2543,12 +2624,12 @@ func handleDeleteEmails(config *Config) {
 
 	printInfo("停用后可重新激活")
 	if !confirmAction("确认停用这些邮箱") {
-		printInfo("已取消")
+		printInfo(i18n.T("msg.cancelled"))
 		return
 	}
 
 	// 执行停用
-	printSubHeader("执行停用")
+	printSubHeader(i18n.T("action.deactivating"))
 	successCount := 0
 	failCount := 0
 
@@ -2586,7 +2667,7 @@ func handleDeleteEmails(config *Config) {
 
 // 批量创建邮箱
 func handleBatchCreate(config *Config) {
-	printHeader("批量创建邮箱")
+	printHeader(i18n.T("header.batch_create"))
 
 	count, err := readInt("创建数量: ")
 	if err != nil || count <= 0 {
@@ -2597,7 +2678,7 @@ func handleBatchCreate(config *Config) {
 	if count > 50 {
 		printWarning("建议单次创建不超过 50 个")
 		if !confirmAction("继续创建这么多邮箱") {
-			printInfo("已取消")
+			printInfo(i18n.T("msg.cancelled"))
 			return
 		}
 	}
@@ -2616,7 +2697,7 @@ func handleBatchCreate(config *Config) {
 	fmt.Printf("  "+ColorDim+"耗时: %d:%02d"+ColorReset+"\n", estimatedTime/60, estimatedTime%60)
 
 	if !confirmAction("开始批量创建") {
-		printInfo("已取消")
+		printInfo(i18n.T("msg.cancelled"))
 		return
 	}
 
@@ -2682,10 +2763,10 @@ func handlePermanentDelete(config *Config) {
 	}
 
 	printInfo("输入序号 (逗号分隔，如: 1,3,5)")
-	input := readInput("序号: ")
+	input := readInput(i18n.T("prompt.index") + ": ")
 
 	if input == "" {
-		printInfo("已取消")
+		printInfo(i18n.T("msg.cancelled"))
 		return
 	}
 
@@ -2715,7 +2796,7 @@ func handlePermanentDelete(config *Config) {
 	confirm = strings.TrimSpace(confirm)
 
 	if confirm != "DELETE" {
-		printInfo("已取消")
+		printInfo(i18n.T("msg.cancelled"))
 		return
 	}
 
@@ -2791,10 +2872,10 @@ func handleReactivate(config *Config) {
 	}
 
 	printInfo("输入序号 (逗号分隔，如: 1,3,5)")
-	input := readInput("序号: ")
+	input := readInput(i18n.T("prompt.index") + ": ")
 
 	if input == "" {
-		printInfo("已取消")
+		printInfo(i18n.T("msg.cancelled"))
 		return
 	}
 
@@ -2818,7 +2899,7 @@ func handleReactivate(config *Config) {
 	}
 
 	if !confirmAction("确认重新激活这些邮箱") {
-		printInfo("已取消")
+		printInfo(i18n.T("msg.cancelled"))
 		return
 	}
 

@@ -1,0 +1,226 @@
+package i18n
+
+// deTranslations contains German translations
+var deTranslations = map[string]string{
+	// Error messages
+	"err.read_config":        "Konfigurationsdatei konnte nicht gelesen werden: %v",
+	"err.parse_config":       "Konfigurationsdatei konnte nicht geparst werden: %v",
+	"err.serialize_config":   "Konfiguration konnte nicht serialisiert werden: %v",
+	"err.save_config":        "Konfigurationsdatei konnte nicht gespeichert werden: %v",
+	"err.already_running":    "Programm läuft bereits (PID: %s)",
+	"err.create_lock":        "Lock-Datei konnte nicht erstellt werden: %v",
+	"err.delete_lock":        "Lock-Datei konnte nicht gelöscht werden: %v",
+	"err.request_failed":     "Anfrage fehlgeschlagen (%d Wiederholungen): %v",
+	"err.empty_base_url":     "Basis-URL ist leer, API-Endpunkt kann nicht erstellt werden",
+	"err.parse_url":          "Basis-URL %q kann nicht geparst werden: %w",
+	"err.empty_target_path":  "Zielpfad ist leer, API-Endpunkt kann nicht erstellt werden",
+	"err.empty_replace_path": "Ersetzungspfad ist leer, API-Endpunkt kann nicht erstellt werden",
+	"err.path_not_found":     "Basis-URL %q enthält nicht das erwartete Pfadsegment %q",
+	"err.gzip_reader":        "Gzip-Reader kann nicht erstellt werden: %w",
+	"err.read_response":      "Antwort kann nicht gelesen werden: %w",
+	"err.open_config":        "Konfigurationsdatei kann nicht geöffnet werden: %v",
+	"err.build_api":          "%s API kann nicht erstellt werden: %w",
+	"err.serialize_body":     "Anfragekörper kann nicht serialisiert werden: %v",
+	"err.create_request":     "Anfrage kann nicht erstellt werden: %v",
+	"err.network_failed":     "Anfrage fehlgeschlagen: %v",
+	"err.api_status":         "API gab Fehlerstatuscode zurück: %d, Antwort: %s",
+	"err.parse_response":     "Antwort kann nicht geparst werden: %v, Rohantwort: %s",
+	"err.api_failed":         "API-Anfrage fehlgeschlagen: %s",
+	"err.confirm_failed":     "E-Mail-Erstellung konnte nicht bestätigt werden: %v",
+	"err.no_candidates":      "Keine E-Mail-Kandidaten verfügbar",
+	"err.invalid_choice":     "Ungültige Auswahl: %s",
+	"err.candidate_not_found": "E-Mail für ID%d kann nicht gefunden werden",
+	"err.batch_count":        "Batch-Erstellungsanzahl muss größer als 0 sein",
+
+	// Headers
+	"header.main":            "iCloud Hide My Email Manager",
+	"header.email_list":      "E-Mail-Liste",
+	"header.create_email":    "Neue E-Mail erstellen",
+	"header.smart_create":    "Intelligente E-Mail-Erstellung",
+	"header.deactivate":      "E-Mail deaktivieren",
+	"header.batch_create":    "E-Mails stapelweise erstellen",
+	"header.settings":        "Programmeinstellungen",
+	"header.quality_settings": "E-Mail-Qualitätseinstellungen",
+	"header.save_settings":   "E-Mail-Speichereinstellungen",
+	"header.weight_settings": "Bewertungsgewicht-Einstellungen",
+
+	// Menu items
+	"menu.list":              "E-Mail-Liste anzeigen",
+	"menu.create":            "Neue E-Mail erstellen",
+	"menu.create_normal":     "(Normaler Modus)",
+	"menu.smart_create":      "Intelligente E-Mail-Erstellung",
+	"menu.recommended":       "(Empfohlen)",
+	"menu.deactivate":        "E-Mail deaktivieren",
+	"menu.batch_create":      "E-Mails stapelweise erstellen",
+	"menu.delete":            "Deaktivierte E-Mails endgültig löschen",
+	"menu.unrecoverable":     "(Unwiederbringlich)",
+	"menu.reactivate":        "Deaktivierte E-Mails reaktivieren",
+	"menu.settings":          "Programmeinstellungen",
+	"menu.test_scoring":      "Bewertungsalgorithmus testen",
+	"menu.dev_debug":         "(Entwickler-Debug)",
+	"menu.exit":              "Beenden",
+	"menu.exit_hint":         "(oder q/quit/exit eingeben)",
+
+	// Labels and info
+	"label.email":            "E-Mail",
+	"label.label":            "Label",
+	"label.forward":          "Weiterleitung",
+	"label.created":          "Erstellt",
+	"label.score":            "Bewertung",
+	"label.tries":            "Versuche",
+	"label.time":             "Zeit",
+	"label.count":            "Anzahl",
+	"label.delay":            "Verzögerung",
+	"label.progress":         "Fortschritt",
+
+	// Status
+	"status.active":          "Aktiv",
+	"status.inactive":        "Inaktiv",
+	"status.total":           "Gesamt",
+	"status.success":         "Erfolgreich",
+	"status.failed":          "Fehlgeschlagen",
+	"status.enabled":         "Aktiviert",
+	"status.disabled":        "Deaktiviert",
+
+	// Actions
+	"action.loading":         "E-Mail-Liste wird geladen",
+	"action.creating":        "E-Mail wird erstellt",
+	"action.confirming":      "E-Mail-Erstellung wird bestätigt",
+	"action.deactivating":    "Wird deaktiviert",
+	"action.deleting":        "Wird endgültig gelöscht",
+	"action.reactivating":    "Wird reaktiviert",
+
+	// Messages
+	"msg.no_emails":          "Keine E-Mails",
+	"msg.label_required":     "Label darf nicht leer sein",
+	"msg.create_success":     "E-Mail erfolgreich erstellt",
+	"msg.save_failed":        "Speichern in Datei fehlgeschlagen: %v",
+	"msg.cancelled":          "Abgebrochen",
+	"msg.auto_select":        "Beste E-Mail wird automatisch ausgewählt",
+	"msg.manual_select":      "Manuelle Auswahl",
+	"msg.selected_id":        "ID %d ausgewählt",
+	"msg.target_score":       "Zielbewertung",
+	"msg.max_tries":          "Max. Versuche",
+	"msg.generating":         "E-Mail #%d wird generiert",
+	"msg.best_score":         "Zielbewertung erreicht, automatische Auswahl",
+	"msg.select_prompt":      "ID eingeben um E-Mail auszuwählen (1-3), oder 'auto' für automatische Auswahl",
+	"msg.choice_prompt":      "Auswahl",
+	"msg.total_generated":    "%d E-Mails generiert",
+	"msg.recommended_id":     "(Empfohlen: ID %d)",
+	"msg.best_mark":          "(Beste)",
+	"msg.detailed_score":     "Detaillierte Bewertung",
+
+	// Smart generation
+	"smart.current_settings": "Aktuelle Einstellungen",
+	"smart.auto_select":      "Auto-Auswahl",
+	"smart.min_score":        "Min. Bewertung",
+	"smart.max_tries_label":  "Max. Versuche",
+	"smart.show_scores":      "Bewertungen anzeigen",
+	"smart.execution":        "Intelligente E-Mail-Generierung",
+
+	// Batch creation
+	"batch.execution":        "Stapelerstellung läuft",
+	"batch.plan":             "Erstellungsplan",
+	"batch.estimated_time":   "Geschätzte Zeit",
+	"batch.label_prefix":     "Label-Präfix",
+	"batch.default_prefix":   "(Standard: auto-)",
+
+	// Settings
+	"settings.current":       "Aktuelle Konfiguration",
+	"settings.quality":       "E-Mail-Qualitätseinstellungen",
+	"settings.save":          "E-Mail-Speichereinstellungen",
+	"settings.dev_mode":      "Entwicklermodus",
+	"settings.language":      "Spracheinstellungen",
+	"settings.return":        "Zurück zum Hauptmenü",
+	"settings.return_parent": "Zurück zum vorherigen Menü",
+	"settings.auto_select":   "Auto-Auswahl",
+	"settings.min_score":     "Minimale Bewertung",
+	"settings.max_tries":     "Maximale Versuche",
+	"settings.show_scores":   "Bewertungen anzeigen",
+	"settings.allow_manual":  "Manuell erlauben",
+	"settings.weights":       "Bewertungsgewicht-Einstellungen",
+	"settings.reset":         "Auf Standardwerte zurücksetzen",
+	"settings.save_emails":   "Generierte E-Mails speichern",
+	"settings.file_path":     "Speicherdateipfad",
+
+	// Weight settings
+	"weight.current":         "Aktuelle Gewichtskonfiguration",
+	"weight.total":           "(Gesamt: %d)",
+	"weight.prefix":          "Präfixstruktur",
+	"weight.length":          "Längenbewertung",
+	"weight.readability":     "Lesbarkeits-Bewertung",
+	"weight.security":        "Sicherheits-Bewertung",
+	"weight.reset":           "Auf empfohlene Werte zurücksetzen",
+
+	// Score details
+	"score.structure":        "Struktur",
+	"score.length":           "Länge",
+	"score.readability":      "Lesbar",
+	"score.security":         "Sicherheit",
+
+	// Prompts
+	"prompt.email_label":     "E-Mail-Label",
+	"prompt.create_count":    "Erstellungsanzahl",
+	"prompt.label_prefix":    "Label-Präfix",
+	"prompt.select_index":    "Index eingeben (durch Komma getrennt, z.B.: 1,3,5)",
+	"prompt.index":           "Index",
+	"prompt.confirm":         "(j/n)",
+	"prompt.continue":        "Enter drücken zum Fortfahren...",
+	"prompt.select_option":   "Option wählen (0-%d)",
+	"prompt.enter_score":     "Minimalbewertung eingeben (0-100)",
+	"prompt.enter_tries":     "Maximale Versuche eingeben (1-5)",
+	"prompt.enter_weight":    "%s-Gewicht eingeben (0-100)",
+	"prompt.enter_filename":  "Speicherdateinamen eingeben",
+	"prompt.invalid_number":  "Bitte eine gültige Zahl eingeben",
+	"prompt.invalid_range":   "Bitte eine Zahl zwischen %d-%d eingeben",
+	"prompt.filename_empty":  "Dateiname darf nicht leer sein",
+
+	// Confirmations
+	"confirm.deactivate":     "Deaktivierung dieser E-Mails bestätigen",
+	"confirm.delete":         "Endgültiges Löschen dieser E-Mails bestätigen",
+	"confirm.reactivate":     "Reaktivierung dieser E-Mails bestätigen",
+	"confirm.batch_create":   "Fortfahren mit der Erstellung dieser vielen E-Mails",
+
+	// Warnings
+	"warn.large_batch":       "Empfohlen werden maximal 50 E-Mails auf einmal",
+	"warn.cannot_reactivate": "Kann nach Deaktivierung nicht reaktiviert werden",
+	"warn.cannot_recover":    "Kann nach Löschung nicht wiederhergestellt werden",
+
+	// Email list display
+	"list.no_active":         "Keine aktiven E-Mails",
+	"list.no_inactive":       "Keine deaktivierten E-Mails",
+	"list.will_deactivate":   "%d E-Mails werden deaktiviert",
+	"list.will_delete":       "%d E-Mails werden endgültig gelöscht",
+	"list.will_reactivate":   "%d E-Mails werden reaktiviert",
+
+	// Results
+	"result.success_count":   "%d erfolgreich verarbeitet",
+	"result.failed_count":    "%d fehlgeschlagen",
+	"result.saved_to":        "Gespeichert in %s",
+
+	// Config messages
+	"config.setting_changed": "%s gesetzt auf: %v",
+	"config.score_changed":   "Minimalbewertung gesetzt auf: %d",
+	"config.tries_changed":   "Maximale Versuche gesetzt auf: %d",
+	"config.weight_changed":  "%s-Gewicht gesetzt auf: %d",
+	"config.path_changed":    "Speicherdateipfad gesetzt auf: %s",
+	"config.reset":           "Auf Standardeinstellungen zurückgesetzt",
+	"config.weight_reset":    "Auf empfohlene Gewichtskonfiguration zurückgesetzt",
+
+	// Error prompts
+	"error.invalid_choice":   "Ungültige Auswahl, bitte %s eingeben",
+	"error.invalid_index":    "Ungültiger Index: %s",
+	"error.read_input":       "Eingabe konnte nicht gelesen werden: %v",
+	"error.open_file":        "Datei kann nicht geöffnet werden: %v",
+	"error.write_file":       "Schreiben fehlgeschlagen: %v",
+	"error.save_email_record": "E-Mail-Eintrag kann nicht geschrieben werden: %v",
+
+	// Language settings
+	"lang.select_prompt":     "请选择语言 / Select Language / Sprache wählen",
+	"lang.chinese":           "中文 (Chinese)",
+	"lang.english":           "English",
+	"lang.german":            "Deutsch (German)",
+	"lang.current":           "Aktuelle Sprache",
+	"lang.changed":           "Sprache geändert zu: %s",
+	"lang.restart_note":      "Hinweis: Einige Texte werden nach Rückkehr zum Hauptmenü wirksam",
+}

@@ -1,0 +1,226 @@
+package i18n
+
+// zhTranslations contains Chinese translations
+var zhTranslations = map[string]string{
+	// Error messages
+	"err.read_config":        "读取配置文件失败: %v",
+	"err.parse_config":       "解析配置文件失败: %v",
+	"err.serialize_config":   "序列化配置失败: %v",
+	"err.save_config":        "保存配置文件失败: %v",
+	"err.already_running":    "程序已在运行 (PID: %s)",
+	"err.create_lock":        "创建锁文件失败: %v",
+	"err.delete_lock":        "删除锁文件失败: %v",
+	"err.request_failed":     "请求失败 (重试%d次): %v",
+	"err.empty_base_url":     "基础URL为空，无法构建API端点",
+	"err.parse_url":          "无法解析基础URL %q: %w",
+	"err.empty_target_path":  "目标路径为空，无法构建API端点",
+	"err.empty_replace_path": "替换路径为空，无法构建API端点",
+	"err.path_not_found":     "基础URL %q 未包含期望的路径片段 %q",
+	"err.gzip_reader":        "无法创建 gzip reader: %w",
+	"err.read_response":      "无法读取响应: %w",
+	"err.open_config":        "无法打开配置文件: %v",
+	"err.build_api":          "无法构建 %s 接口: %w",
+	"err.serialize_body":     "无法序列化请求体: %v",
+	"err.create_request":     "无法创建请求: %v",
+	"err.network_failed":     "请求失败: %v",
+	"err.api_status":         "API返回错误状态码: %d, 响应: %s",
+	"err.parse_response":     "无法解析响应: %v, 原始响应: %s",
+	"err.api_failed":         "API返回失败: %s",
+	"err.confirm_failed":     "确认创建邮箱失败: %v",
+	"err.no_candidates":      "没有可选择的邮箱",
+	"err.invalid_choice":     "无效的选择: %s",
+	"err.candidate_not_found": "找不到 ID%d 对应的邮箱",
+	"err.batch_count":        "批量创建数量必须大于 0",
+
+	// Headers
+	"header.main":            "iCloud 隐藏邮箱管理工具",
+	"header.email_list":      "邮箱列表",
+	"header.create_email":    "创建新邮箱",
+	"header.smart_create":    "智能创建邮箱",
+	"header.deactivate":      "停用邮箱",
+	"header.batch_create":    "批量创建邮箱",
+	"header.settings":        "程序设置",
+	"header.quality_settings": "邮箱质量设置",
+	"header.save_settings":   "邮箱保存设置",
+	"header.weight_settings": "评分权重设置",
+
+	// Menu items
+	"menu.list":              "查看邮箱列表",
+	"menu.create":            "创建新邮箱",
+	"menu.create_normal":     "(普通模式)",
+	"menu.smart_create":      "智能创建邮箱",
+	"menu.recommended":       "(推荐)",
+	"menu.deactivate":        "停用邮箱",
+	"menu.batch_create":      "批量创建邮箱",
+	"menu.delete":            "彻底删除停用的邮箱",
+	"menu.unrecoverable":     "(不可恢复)",
+	"menu.reactivate":        "重新激活停用的邮箱",
+	"menu.settings":          "程序设置",
+	"menu.test_scoring":      "测试评分算法",
+	"menu.dev_debug":         "(开发调试)",
+	"menu.exit":              "退出",
+	"menu.exit_hint":         "(或输入 q/quit/exit)",
+
+	// Labels and info
+	"label.email":            "邮箱",
+	"label.label":            "标签",
+	"label.forward":          "转发",
+	"label.created":          "创建",
+	"label.score":            "分数",
+	"label.tries":            "尝试",
+	"label.time":             "时间",
+	"label.count":            "数量",
+	"label.delay":            "延迟",
+	"label.progress":         "进度",
+
+	// Status
+	"status.active":          "激活",
+	"status.inactive":        "停用",
+	"status.total":           "总计",
+	"status.success":         "成功",
+	"status.failed":          "失败",
+	"status.enabled":         "启用",
+	"status.disabled":        "禁用",
+
+	// Actions
+	"action.loading":         "获取邮箱列表",
+	"action.creating":        "创建邮箱",
+	"action.confirming":      "确认创建邮箱",
+	"action.deactivating":    "停用",
+	"action.deleting":        "彻底删除",
+	"action.reactivating":    "重新激活",
+
+	// Messages
+	"msg.no_emails":          "暂无邮箱",
+	"msg.label_required":     "标签不能为空",
+	"msg.create_success":     "邮箱创建成功",
+	"msg.save_failed":        "保存到文件失败: %v",
+	"msg.cancelled":          "已取消",
+	"msg.auto_select":        "自动选择最佳邮箱",
+	"msg.manual_select":      "手动选择",
+	"msg.selected_id":        "已选择 ID%d",
+	"msg.target_score":       "目标分数",
+	"msg.max_tries":          "最大尝试",
+	"msg.generating":         "生成第 %d 个邮箱",
+	"msg.best_score":         "达到目标分数，自动选择",
+	"msg.select_prompt":      "输入 ID 选择邮箱 (1-3)，或输入 'auto' 自动选择最佳",
+	"msg.choice_prompt":      "选择",
+	"msg.total_generated":    "共生成 %d 个邮箱",
+	"msg.recommended_id":     "(推荐: ID%d)",
+	"msg.best_mark":          "(最佳)",
+	"msg.detailed_score":     "详细评分",
+
+	// Smart generation
+	"smart.current_settings": "当前设置",
+	"smart.auto_select":      "自动选择",
+	"smart.min_score":        "最低分数",
+	"smart.max_tries_label":  "最大尝试",
+	"smart.show_scores":      "显示详分",
+	"smart.execution":        "智能邮箱生成",
+
+	// Batch creation
+	"batch.execution":        "批量创建执行中",
+	"batch.plan":             "创建计划",
+	"batch.estimated_time":   "耗时",
+	"batch.label_prefix":     "标签前缀",
+	"batch.default_prefix":   "(默认: auto-)",
+
+	// Settings
+	"settings.current":       "当前配置",
+	"settings.quality":       "邮箱质量设置",
+	"settings.save":          "邮箱保存设置",
+	"settings.dev_mode":      "开发者模式",
+	"settings.language":      "语言设置",
+	"settings.return":        "返回主菜单",
+	"settings.return_parent": "返回上级菜单",
+	"settings.auto_select":   "自动选择",
+	"settings.min_score":     "最低分数",
+	"settings.max_tries":     "最大尝试",
+	"settings.show_scores":   "显示详分",
+	"settings.allow_manual":  "允许手动",
+	"settings.weights":       "评分权重设置",
+	"settings.reset":         "重置为默认值",
+	"settings.save_emails":   "保存生成的邮箱",
+	"settings.file_path":     "保存文件路径",
+
+	// Weight settings
+	"weight.current":         "当前权重配置",
+	"weight.total":           "(总计: %d)",
+	"weight.prefix":          "前缀结构",
+	"weight.length":          "长度评分",
+	"weight.readability":     "可读性评分",
+	"weight.security":        "安全性评分",
+	"weight.reset":           "重置为推荐值",
+
+	// Score details
+	"score.structure":        "结构",
+	"score.length":           "长度",
+	"score.readability":      "可读",
+	"score.security":         "安全",
+
+	// Prompts
+	"prompt.email_label":     "邮箱标签",
+	"prompt.create_count":    "创建数量",
+	"prompt.label_prefix":    "标签前缀",
+	"prompt.select_index":    "输入序号 (逗号分隔，如: 1,3,5)",
+	"prompt.index":           "序号",
+	"prompt.confirm":         "(y/n)",
+	"prompt.continue":        "按回车键继续...",
+	"prompt.select_option":   "选择设置项 (0-%d)",
+	"prompt.enter_score":     "输入最低分数 (0-100)",
+	"prompt.enter_tries":     "输入最大尝试次数 (1-5)",
+	"prompt.enter_weight":    "输入%s权重 (0-100)",
+	"prompt.enter_filename":  "输入保存文件名",
+	"prompt.invalid_number":  "请输入有效的数字",
+	"prompt.invalid_range":   "请输入 %d-%d 之间的数字",
+	"prompt.filename_empty":  "文件名不能为空",
+
+	// Confirmations
+	"confirm.deactivate":     "确认停用这些邮箱",
+	"confirm.delete":         "确认彻底删除这些邮箱",
+	"confirm.reactivate":     "确认重新激活这些邮箱",
+	"confirm.batch_create":   "继续创建这么多邮箱",
+
+	// Warnings
+	"warn.large_batch":       "建议单次创建不超过 50 个",
+	"warn.cannot_reactivate": "停用后可重新激活",
+	"warn.cannot_recover":    "删除后无法恢复",
+
+	// Email list display
+	"list.no_active":         "暂无激活的邮箱",
+	"list.no_inactive":       "暂无停用的邮箱",
+	"list.will_deactivate":   "将停用 %d 个邮箱",
+	"list.will_delete":       "将彻底删除 %d 个邮箱",
+	"list.will_reactivate":   "将重新激活 %d 个邮箱",
+
+	// Results
+	"result.success_count":   "成功 %d 个",
+	"result.failed_count":    "失败 %d 个",
+	"result.saved_to":        "已保存到 %s",
+
+	// Config messages
+	"config.setting_changed": "%s已设置为: %v",
+	"config.score_changed":   "最低分数已设置为: %d",
+	"config.tries_changed":   "最大尝试次数已设置为: %d",
+	"config.weight_changed":  "%s权重已设置为: %d",
+	"config.path_changed":    "保存文件路径已设置为: %s",
+	"config.reset":           "已重置为默认设置",
+	"config.weight_reset":    "已重置为推荐权重配置",
+
+	// Error prompts
+	"error.invalid_choice":   "无效选择，请输入 %s",
+	"error.invalid_index":    "无效的序号: %s",
+	"error.read_input":       "读取输入失败: %v",
+	"error.open_file":        "无法打开文件: %v",
+	"error.write_file":       "写入失败: %v",
+	"error.save_email_record": "无法写入邮箱记录: %v",
+
+	// Language settings
+	"lang.select_prompt":     "请选择语言 / Select Language / Sprache wählen",
+	"lang.chinese":           "中文 (Chinese)",
+	"lang.english":           "English",
+	"lang.german":            "Deutsch (German)",
+	"lang.current":           "当前语言",
+	"lang.changed":           "语言已切换为: %s",
+	"lang.restart_note":      "提示：部分文本需要返回主菜单后生效",
+}
