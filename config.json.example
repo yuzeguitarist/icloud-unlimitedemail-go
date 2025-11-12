@@ -24,6 +24,7 @@
   "lang_code": "en-us",
   "count": 5,
   "delay_seconds": 2,
+  "max_concurrency": 3,
   "output_file": "generated_emails.txt",
   "email_quality": {
     "auto_select": false,
