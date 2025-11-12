@@ -32,6 +32,7 @@ import (
 	"encoding/json"
 	"fmt"
 	"io"
+	"net"
 	"net/http"
 	"net/url"
 	"os"
@@ -42,6 +43,8 @@ import (
 	"sync"
 	"syscall"
 	"time"
+
+	"github.com/fsnotify/fsnotify"
 )
 
 // Config 配置结构体
@@ -62,6 +65,9 @@ type Config struct {
 	// 批量生成配置
 	Count        int `json:"count"`
 	DelaySeconds int `json:"delay_seconds"`
+
+	// 并发配置
+	MaxConcurrency int `json:"max_concurrency"` // 最大并发数，0表示串行
 
 	// 邮箱标签配置
 	LabelPrefix string `json:"label_prefix"` // 标签前缀，会自动加上序号
@@ -389,14 +395,20 @@ func (nm *NetworkManager) GetClient() *http.Client {
 	return nm.client
 }
 
-// DoWithRetry 带重试的HTTP请求
+// DoWithRetry 带重试的HTTP请求（使用指数退避策略）
 func (nm *NetworkManager) DoWithRetry(req *http.Request) (*http.Response, error) {
 	var lastErr error
+	baseDelay := 500 * time.Millisecond // 基础延迟 500ms
 
 	for i := 0; i <= nm.retryCount; i++ {
 		if i > 0 {
-			// 等待一段时间再重试
-			time.Sleep(time.Duration(i) * time.Second)
+			// 指数退避: 500ms, 1s, 2s, 4s, 8s...
+			delay := baseDelay * time.Duration(1<<uint(i-1))
+			// 最大延迟不超过 10 秒
+			if delay > 10*time.Second {
+				delay = 10 * time.Second
+			}
+			time.Sleep(delay)
 		}
 
 		resp, err := nm.client.Do(req)
@@ -447,20 +459,37 @@ func (c *Config) httpClient() *http.Client {
 			timeout = 30
 		}
 
-		if base, ok := http.DefaultTransport.(*http.Transport); ok {
-			transport := base.Clone()
-			transport.MaxIdleConns = 32
-			transport.MaxIdleConnsPerHost = 32
-			transport.IdleConnTimeout = 90 * time.Second
-			c.client = &http.Client{
-				Timeout:   time.Duration(timeout) * time.Second,
-				Transport: transport,
-			}
-			return
+		// 优化的 HTTP 传输配置
+		transport := &http.Transport{
+			// 连接池优化
+			MaxIdleConns:        100,              // 全局最大空闲连接数
+			MaxIdleConnsPerHost: 10,               // 每个主机最大空闲连接数
+			MaxConnsPerHost:     0,                // 每个主机最大连接数（0表示不限制）
+			IdleConnTimeout:     90 * time.Second, // 空闲连接超时
+
+			// 连接建立超时优化
+			DialContext: (&net.Dialer{
+				Timeout:   10 * time.Second, // 连接超时
+				KeepAlive: 30 * time.Second, // TCP KeepAlive
+			}).DialContext,
+
+			// 响应头超时
+			ResponseHeaderTimeout: 10 * time.Second,
+			ExpectContinueTimeout: 1 * time.Second,
+
+			// TLS 优化
+			TLSHandshakeTimeout: 10 * time.Second,
+
+			// 启用 HTTP/2
+			ForceAttemptHTTP2: true,
+
+			// 禁用压缩（我们已有 gzip 处理）
+			DisableCompression: false,
 		}
 
 		c.client = &http.Client{
-			Timeout: time.Duration(timeout) * time.Second,
+			Timeout:   time.Duration(timeout) * time.Second,
+			Transport: transport,
 		}
 	})
 
@@ -700,7 +729,7 @@ func generateHME(config *Config) (string, error) {
 	}
 
 	// 创建HTTP请求
-	req, err := http.NewRequest("POST", url, bytes.NewBuffer(jsonData))
+	req, err := http.NewRequest("POST", url, bytes.NewReader(jsonData))
 	if err != nil {
 		return "", fmt.Errorf("无法创建请求: %v", err)
 	}
@@ -1196,7 +1225,7 @@ func countSpecialChars(s string) int {
 	return count
 }
 
-// 智能邮箱生成器 - 核心功能
+// 智能邮箱生成器 - 核心功能（并发优化版本）
 func generateSmartEmail(config *Config, label string) (*EmailQualityResult, error) {
 	qualityConfig := config.EmailQuality
 	maxTries := qualityConfig.MaxRegenerateCount
@@ -1204,81 +1233,109 @@ func generateSmartEmail(config *Config, label string) (*EmailQualityResult, erro
 		maxTries = 3 // 默认最多3次
 	}
 
+	printSubHeader("智能邮箱生成")
+	fmt.Printf("  "+ColorCyan+"目标分数:"+ColorReset+" %d+ "+ColorDim+"|"+ColorReset+" "+ColorCyan+"最大尝试:"+ColorReset+" %d 次\n\n", qualityConfig.MinScore, maxTries)
+
+	// 并发生成所有候选邮箱
+	type candidateResult struct {
+		candidate EmailCandidate
+		err       error
+	}
+
+	resultChan := make(chan candidateResult, maxTries)
+	var wg sync.WaitGroup
+
+	for i := 1; i <= maxTries; i++ {
+		wg.Add(1)
+		go func(id int) {
+			defer wg.Done()
+
+			// 生成邮箱
+			email, err := generateHME(config)
+			if err != nil {
+				resultChan <- candidateResult{err: err}
+				return
+			}
+
+			// 评估质量
+			score := evaluateEmailQuality(email, qualityConfig.Weights)
+			resultChan <- candidateResult{
+				candidate: EmailCandidate{
+					Email: email,
+					Score: score,
+					ID:    id,
+				},
+			}
+		}(i)
+	}
+
+	// 等待所有任务完成
+	go func() {
+		wg.Wait()
+		close(resultChan)
+	}()
+
+	// 收集结果
 	var candidates []EmailCandidate
 	var bestEmail string
 	var bestScore int
 
-	printSubHeader("智能邮箱生成")
-	fmt.Printf("  "+ColorCyan+"目标分数:"+ColorReset+" %d+ "+ColorDim+"|"+ColorReset+" "+ColorCyan+"最大尝试:"+ColorReset+" %d 次\n\n", qualityConfig.MinScore, maxTries)
-
-	for i := 1; i <= maxTries; i++ {
-		fmt.Printf("  "+ColorDim+"..."+ColorReset+" 生成第 %d 个邮箱 ... ", i)
-
-		// 生成邮箱
-		email, err := generateHME(config)
-		if err != nil {
-			fmt.Printf(ColorRed + "[!]" + ColorReset + "\n")
-			fmt.Printf("    错误: %v\n", err)
+	for result := range resultChan {
+		if result.err != nil {
+			fmt.Printf("  "+ColorRed+"[!]"+ColorReset+" 生成失败: %v\n", result.err)
 			continue
 		}
 
-		// 评估质量
-		score := evaluateEmailQuality(email, qualityConfig.Weights)
-		candidate := EmailCandidate{
-			Email: email,
-			Score: score,
-			ID:    i,
-		}
+		candidate := result.candidate
 		candidates = append(candidates, candidate)
 
 		// 显示结果
 		var scoreColor string
-		if score >= qualityConfig.MinScore {
+		if candidate.Score >= qualityConfig.MinScore {
 			scoreColor = ColorGreen
-		} else if score >= qualityConfig.MinScore-20 {
+		} else if candidate.Score >= qualityConfig.MinScore-20 {
 			scoreColor = ColorYellow
 		} else {
 			scoreColor = ColorRed
 		}
 
-		fmt.Printf(ColorGreen + "[+]" + ColorReset + "\n")
-		fmt.Printf("    "+ColorCyan+"邮箱:"+ColorReset+" %s\n", email)
-		fmt.Printf("    "+ColorMagenta+"分数:"+ColorReset+" "+scoreColor+"%d"+ColorReset+"/100\n", score)
+		fmt.Printf("  "+ColorGreen+"[+]"+ColorReset+" 邮箱 #%d: %s\n", candidate.ID, candidate.Email)
+		fmt.Printf("      "+ColorMagenta+"分数:"+ColorReset+" "+scoreColor+"%d"+ColorReset+"/100\n", candidate.Score)
 
 		// 更新最佳邮箱
-		if score > bestScore {
-			bestEmail = email
-			bestScore = score
+		if candidate.Score > bestScore {
+			bestEmail = candidate.Email
+			bestScore = candidate.Score
 		}
-
-		// 如果达到目标分数且启用自动选择，直接返回
-		if qualityConfig.AutoSelect && score >= qualityConfig.MinScore {
-			fmt.Printf("    " + ColorBrightGreen + "[+] 达到目标分数，自动选择" + ColorReset + "\n")
-
-			// 确认创建邮箱
-			finalEmail, err := reserveHME(config, email, label)
-			if err != nil {
-				return nil, fmt.Errorf("确认创建邮箱失败: %v", err)
-			}
-
-			return &EmailQualityResult{
-				Candidates:   candidates,
-				BestEmail:    finalEmail,
-				BestScore:    score,
-				TotalTries:   i,
-				AutoSelected: true,
-			}, nil
-		}
-
-		// 延迟
-		if i < maxTries {
-			fmt.Printf("    " + ColorDim + "等待 1s\n" + ColorReset)
-			time.Sleep(1 * time.Second)
-		}
-		fmt.Println()
 	}
 
-	// 如果没有自动选择，返回所有候选项
+	fmt.Println()
+
+	// 如果没有成功生成任何邮箱
+	if len(candidates) == 0 {
+		return nil, fmt.Errorf("所有生成尝试均失败")
+	}
+
+	// 如果启用自动选择且有满足条件的邮箱
+	if qualityConfig.AutoSelect && bestScore >= qualityConfig.MinScore {
+		fmt.Printf("  " + ColorBrightGreen + "[+] 自动选择最佳邮箱 (分数: %d)" + ColorReset + "\n\n", bestScore)
+
+		// 确认创建邮箱
+		finalEmail, err := reserveHME(config, bestEmail, label)
+		if err != nil {
+			return nil, fmt.Errorf("确认创建邮箱失败: %v", err)
+		}
+
+		return &EmailQualityResult{
+			Candidates:   candidates,
+			BestEmail:    finalEmail,
+			BestScore:    bestScore,
+			TotalTries:   len(candidates),
+			AutoSelected: true,
+		}, nil
+	}
+
+	// 返回所有候选项供手动选择
 	return &EmailQualityResult{
 		Candidates:   candidates,
 		BestEmail:    bestEmail,
@@ -1444,7 +1501,7 @@ func reserveHME(config *Config, hme string, label string) (string, error) {
 	}
 
 	// 创建HTTP请求
-	req, err := http.NewRequest("POST", url, bytes.NewBuffer(jsonData))
+	req, err := http.NewRequest("POST", url, bytes.NewReader(jsonData))
 	if err != nil {
 		return "", fmt.Errorf("无法创建请求: %v", err)
 	}
@@ -1577,7 +1634,7 @@ func deactivateHME(config *Config, anonymousID string) error {
 		return fmt.Errorf("序列化请求失败: %v", err)
 	}
 
-	req, err := http.NewRequest("POST", url, bytes.NewBuffer(jsonData))
+	req, err := http.NewRequest("POST", url, bytes.NewReader(jsonData))
 	if err != nil {
 		return fmt.Errorf("创建请求失败: %v", err)
 	}
@@ -1638,7 +1695,7 @@ func permanentDeleteHME(config *Config, anonymousID string) error {
 		return fmt.Errorf("序列化请求失败: %v", err)
 	}
 
-	req, err := http.NewRequest("POST", url, bytes.NewBuffer(jsonData))
+	req, err := http.NewRequest("POST", url, bytes.NewReader(jsonData))
 	if err != nil {
 		return fmt.Errorf("创建请求失败: %v", err)
 	}
@@ -1699,7 +1756,7 @@ func reactivateHME(config *Config, anonymousID string) error {
 		return fmt.Errorf("序列化请求失败: %v", err)
 	}
 
-	req, err := http.NewRequest("POST", url, bytes.NewBuffer(jsonData))
+	req, err := http.NewRequest("POST", url, bytes.NewReader(jsonData))
 	if err != nil {
 		return fmt.Errorf("创建请求失败: %v", err)
 	}
@@ -1744,11 +1801,26 @@ func batchGenerate(config *Config, count int, labelPrefix string) ([]string, []e
 		return nil, []error{fmt.Errorf("批量创建数量必须大于 0")}
 	}
 
+	printSubHeader("批量创建执行中")
+
+	// 确定并发数
+	concurrency := config.MaxConcurrency
+	if concurrency <= 0 {
+		concurrency = 1 // 默认串行
+	} else if concurrency > count {
+		concurrency = count
+	}
+
+	fmt.Printf("  "+ColorCyan+"数量:"+ColorReset+" %d "+ColorDim+"|"+ColorReset+" "+ColorCyan+"标签:"+ColorReset+" %s* "+ColorDim+"|"+ColorReset+" "+ColorCyan+"并发:"+ColorReset+" %d\n\n", count, labelPrefix, concurrency)
+
+	// 使用并发模式
+	if concurrency > 1 {
+		return batchGenerateConcurrent(config, count, labelPrefix, concurrency)
+	}
+
+	// 串行模式（原有逻辑）
 	emails := make([]string, 0, count)
 	errs := make([]error, 0, count)
-
-	printSubHeader("批量创建执行中")
-	fmt.Printf("  "+ColorCyan+"数量:"+ColorReset+" %d "+ColorDim+"|"+ColorReset+" "+ColorCyan+"标签:"+ColorReset+" %s*\n\n", count, labelPrefix)
 
 	for i := 0; i < count; i++ {
 		label := fmt.Sprintf("%s%d", labelPrefix, i+1)
@@ -1785,6 +1857,99 @@ func batchGenerate(config *Config, count int, labelPrefix string) ([]string, []e
 	printProgressBar(count, count, "创建进度")
 	fmt.Println()
 
+	return emails, errs
+}
+
+// 并发批量生成邮箱
+func batchGenerateConcurrent(config *Config, count int, labelPrefix string, concurrency int) ([]string, []error) {
+	// 结果通道
+	type result struct {
+		index int
+		email string
+		label string
+		err   error
+	}
+
+	resultChan := make(chan result, count)
+	semaphore := make(chan struct{}, concurrency) // 并发控制
+
+	var wg sync.WaitGroup
+	var progressMutex sync.Mutex
+	completed := 0
+
+	// 启动并发任务
+	for i := 0; i < count; i++ {
+		wg.Add(1)
+		go func(index int) {
+			defer wg.Done()
+
+			// 获取信号量
+			semaphore <- struct{}{}
+			defer func() { <-semaphore }()
+
+			label := fmt.Sprintf("%s%d", labelPrefix, index+1)
+			email, err := createHME(config, label)
+
+			// 发送结果
+			resultChan <- result{
+				index: index,
+				email: email,
+				label: label,
+				err:   err,
+			}
+
+			// 更新进度
+			progressMutex.Lock()
+			completed++
+			printProgressBar(completed, count, "创建进度")
+			progressMutex.Unlock()
+
+			// 延迟（避免请求过快）
+			if config.DelaySeconds > 0 {
+				time.Sleep(time.Duration(config.DelaySeconds) * time.Second)
+			}
+		}(i)
+	}
+
+	// 等待所有任务完成
+	go func() {
+		wg.Wait()
+		close(resultChan)
+	}()
+
+	// 收集结果
+	results := make([]result, 0, count)
+	for r := range resultChan {
+		results = append(results, r)
+	}
+
+	// 按索引排序结果
+	sortedResults := make([]result, count)
+	for _, r := range results {
+		sortedResults[r.index] = r
+	}
+
+	// 提取邮箱和错误
+	emails := make([]string, 0, count)
+	errs := make([]error, 0)
+
+	fmt.Println() // 换行
+	for _, r := range sortedResults {
+		if r.err != nil {
+			fmt.Printf("  "+ColorRed+"[!]"+ColorReset+" %s: %v\n", r.label, r.err)
+			errs = append(errs, r.err)
+		} else {
+			fmt.Printf("  "+ColorGreen+"[+]"+ColorReset+" %s: %s\n", r.label, r.email)
+			emails = append(emails, r.email)
+
+			// 保存邮箱到文件
+			if err := saveEmailToFile(config, r.email, r.label); err != nil {
+				fmt.Printf("    "+ColorYellow+"警告:"+ColorReset+" 保存到文件失败: %v\n", err)
+			}
+		}
+	}
+
+	fmt.Println()
 	return emails, errs
 }
 
@@ -2965,61 +3130,112 @@ func setupSignalHandlers() {
 	}()
 }
 
-// 启动配置热重载监控
+// 启动配置热重载监控（使用 fsnotify 优化）
 func startConfigWatcher() {
 	go func() {
-		ticker := time.NewTicker(2 * time.Second)
-		defer ticker.Stop()
+		// 创建文件监控器
+		watcher, err := fsnotify.NewWatcher()
+		if err != nil {
+			fmt.Printf(ColorYellow+"[!] 无法启动配置文件监控: %v"+ColorReset+"\n", err)
+			return
+		}
+		defer watcher.Close()
+
+		// 监听当前目录而非文件，以支持 vim/VS Code 等编辑器的原子写操作
+		err = watcher.Add(".")
+		if err != nil {
+			fmt.Printf(ColorYellow+"[!] 无法监控当前目录: %v"+ColorReset+"\n", err)
+			return
+		}
 
 		var reloadAttempts int
 		const maxReloadAttempts = 3
 
+		// 使用 debounce 避免多次触发
+		var debounceTimer *time.Timer
+		const debounceDelay = 500 * time.Millisecond
+
 		for {
 			select {
-			case <-ticker.C:
-				if configManager.CheckForUpdates() {
-					fmt.Printf("\n" + ColorYellow + "[!] 检测到配置文件更新，正在重新加载..." + ColorReset + "\n")
+			case event, ok := <-watcher.Events:
+				if !ok {
+					return
+				}
 
-					newConfig, err := configManager.LoadConfig()
-					if err != nil {
-						reloadAttempts++
-						fmt.Printf(ColorRed+"[!] 重新加载配置失败: %v"+ColorReset+"\n", err)
+				// 只处理 config.json 的写入、创建和重命名事件
+				if event.Name != CONFIG_FILE && event.Name != "./"+CONFIG_FILE {
+					continue
+				}
 
-						if reloadAttempts >= maxReloadAttempts {
-							fmt.Printf(ColorRed+"[!] 配置重载失败次数过多 (%d/%d)"+ColorReset+"\n", reloadAttempts, maxReloadAttempts)
-							fmt.Printf(ColorYellow + "[!] 修复建议:" + ColorReset + "\n")
-							fmt.Printf("  1. 检查 config.json 文件格式是否正确\n")
-							fmt.Printf("  2. 确保 JSON 语法无误\n")
-							fmt.Printf("  3. 恢复备份的配置文件\n")
-							fmt.Printf("  4. 重启程序\n")
-							fmt.Printf(ColorRed + "[!] 程序将安全退出..." + ColorReset + "\n")
+				// 处理写入、创建和重命名事件（支持编辑器的原子写操作）
+				if event.Op&fsnotify.Write == fsnotify.Write ||
+					event.Op&fsnotify.Create == fsnotify.Create ||
+					event.Op&fsnotify.Rename == fsnotify.Rename {
 
-							// 安全退出
-							if safetyManager != nil {
-								safetyManager.Unlock()
-							}
-							os.Remove(LOCK_FILE)
-							fmt.Println(ColorGreen + "[+] 程序已安全退出" + ColorReset)
-							os.Exit(1)
-							return
-						}
-						continue
+					// Debounce: 延迟处理，避免多次快速写入
+					if debounceTimer != nil {
+						debounceTimer.Stop()
 					}
 
-					// 重置重试计数
-					reloadAttempts = 0
+					debounceTimer = time.AfterFunc(debounceDelay, func() {
+						// 检查文件是否存在（处理重命名情况）
+						if _, err := os.Stat(CONFIG_FILE); os.IsNotExist(err) {
+							return
+						}
 
-					// 更新全局配置
-					configMutex.Lock()
-					globalConfig = newConfig
-					configMutex.Unlock()
+						fmt.Printf("\n" + ColorYellow + "[!] 检测到配置文件更新，正在重新加载..." + ColorReset + "\n")
 
-					// 清屏并重新显示主菜单
-					clearScreen()
-					fmt.Printf(ColorGreen + "[+] 配置已成功重新加载" + ColorReset + "\n")
-					showMainMenu()
+						newConfig, err := configManager.LoadConfig()
+						if err != nil {
+							reloadAttempts++
+							fmt.Printf(ColorRed+"[!] 重新加载配置失败: %v"+ColorReset+"\n", err)
+
+							if reloadAttempts >= maxReloadAttempts {
+								fmt.Printf(ColorRed+"[!] 配置重载失败次数过多 (%d/%d)"+ColorReset+"\n", reloadAttempts, maxReloadAttempts)
+								fmt.Printf(ColorYellow + "[!] 修复建议:" + ColorReset + "\n")
+								fmt.Printf("  1. 检查 config.json 文件格式是否正确\n")
+								fmt.Printf("  2. 确保 JSON 语法无误\n")
+								fmt.Printf("  3. 恢复备份的配置文件\n")
+								fmt.Printf("  4. 重启程序\n")
+								fmt.Printf(ColorRed + "[!] 程序将安全退出..." + ColorReset + "\n")
+
+								// 安全退出
+								if safetyManager != nil {
+									safetyManager.Unlock()
+								}
+								os.Remove(LOCK_FILE)
+								fmt.Println(ColorGreen + "[+] 程序已安全退出" + ColorReset)
+								os.Exit(1)
+								return
+							}
+							return
+						}
+
+						// 重置重试计数
+						reloadAttempts = 0
+
+						// 更新全局配置
+						configMutex.Lock()
+						globalConfig = newConfig
+						configMutex.Unlock()
+
+						// 清屏并重新显示主菜单
+						clearScreen()
+						fmt.Printf(ColorGreen + "[+] 配置已成功重新加载" + ColorReset + "\n")
+						showMainMenu()
+					})
 				}
+
+			case err, ok := <-watcher.Errors:
+				if !ok {
+					return
+				}
+				fmt.Printf(ColorYellow+"[!] 配置文件监控错误: %v"+ColorReset+"\n", err)
+
 			case <-safetyManager.Context().Done():
+				if debounceTimer != nil {
+					debounceTimer.Stop()
+				}
 				return
 			}
 		}
