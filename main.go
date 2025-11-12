@@ -129,27 +129,6 @@ var (
 	configMutex    sync.RWMutex
 )
 
-// 对象池：减少内存分配
-var (
-	// Buffer 池，用于 JSON 序列化和 HTTP 请求
-	bufferPool = sync.Pool{
-		New: func() interface{} {
-			return new(bytes.Buffer)
-		},
-	}
-)
-
-// getBuffer 从对象池获取 Buffer
-func getBuffer() *bytes.Buffer {
-	return bufferPool.Get().(*bytes.Buffer)
-}
-
-// putBuffer 将 Buffer 归还到对象池
-func putBuffer(buf *bytes.Buffer) {
-	buf.Reset()
-	bufferPool.Put(buf)
-}
-
 // 程序常量
 const (
 	VERSION     = "v2.3.0"
@@ -3162,10 +3141,10 @@ func startConfigWatcher() {
 		}
 		defer watcher.Close()
 
-		// 添加配置文件到监控
-		err = watcher.Add(CONFIG_FILE)
+		// 监听当前目录而非文件，以支持 vim/VS Code 等编辑器的原子写操作
+		err = watcher.Add(".")
 		if err != nil {
-			fmt.Printf(ColorYellow+"[!] 无法监控配置文件: %v"+ColorReset+"\n", err)
+			fmt.Printf(ColorYellow+"[!] 无法监控当前目录: %v"+ColorReset+"\n", err)
 			return
 		}
 
@@ -3183,14 +3162,27 @@ func startConfigWatcher() {
 					return
 				}
 
-				// 只处理写入和创建事件
-				if event.Op&fsnotify.Write == fsnotify.Write || event.Op&fsnotify.Create == fsnotify.Create {
+				// 只处理 config.json 的写入、创建和重命名事件
+				if event.Name != CONFIG_FILE && event.Name != "./"+CONFIG_FILE {
+					continue
+				}
+
+				// 处理写入、创建和重命名事件（支持编辑器的原子写操作）
+				if event.Op&fsnotify.Write == fsnotify.Write ||
+					event.Op&fsnotify.Create == fsnotify.Create ||
+					event.Op&fsnotify.Rename == fsnotify.Rename {
+
 					// Debounce: 延迟处理，避免多次快速写入
 					if debounceTimer != nil {
 						debounceTimer.Stop()
 					}
 
 					debounceTimer = time.AfterFunc(debounceDelay, func() {
+						// 检查文件是否存在（处理重命名情况）
+						if _, err := os.Stat(CONFIG_FILE); os.IsNotExist(err) {
+							return
+						}
+
 						fmt.Printf("\n" + ColorYellow + "[!] 检测到配置文件更新，正在重新加载..." + ColorReset + "\n")
 
 						newConfig, err := configManager.LoadConfig()
