@@ -2,6 +2,7 @@
 icloud-hme
 icloud-hme-*
 icloud-hme-generator
+icloud-email
 *.exe
 *.exe~
 *.dll
