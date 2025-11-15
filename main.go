@@ -2222,7 +2222,7 @@ func showMainMenu() {
 	if config != nil && config.DeveloperMode {
 		fmt.Println("  " + ColorGray + "[9]" + ColorReset + " 测试评分算法 " + ColorDim + "(开发调试)" + ColorReset)
 	}
-	fmt.Println("  " + ColorDim + "[0]" + ColorReset + " 退出 " + ColorDim + "(或输入 q/quit/exit)" + ColorReset)
+	fmt.Println("  " + ColorDim + "[0]" + ColorReset + " 退出")
 
 	printSeparator()
 	fmt.Println()
@@ -2270,17 +2270,16 @@ func handleListEmails(config *Config) {
 			emailColor = ColorGray
 		}
 
-		fmt.Printf("  "+ColorBrightCyan+"%2d."+ColorReset+" %s "+emailColor+"%s"+ColorReset+"\n", i+1, statusSymbol, email.HME)
-		fmt.Printf("      "+ColorBrightBlue+"# 标签: "+ColorReset+ColorCyan+"%s"+ColorReset+"\n", email.Label)
-
-		if email.ForwardToEmail != "" {
-			fmt.Printf("      "+ColorBrightMagenta+"➤ 转发: "+ColorReset+ColorMagenta+"%s"+ColorReset+"\n", email.ForwardToEmail)
+		// 紧凑显示模式：一行显示所有关键信息
+		labelText := email.Label
+		if labelText == "" {
+			labelText = ColorDim + "(无标签)" + ColorReset
+		} else {
+			labelText = ColorCyan + labelText + ColorReset
 		}
 
-		// 显示创建时间
-		createTime := time.Unix(email.CreateTimestamp/1000, 0)
-		fmt.Printf("      "+ColorBrightGreen+"& 创建: "+ColorReset+ColorGreen+"%s"+ColorReset+"\n", createTime.Format("2006-01-02 15:04"))
-		fmt.Println()
+		fmt.Printf("  "+ColorBrightCyan+"%2d."+ColorReset+" %s "+emailColor+"%-40s"+ColorReset+" %s\n",
+			i+1, statusSymbol, email.HME, labelText)
 	}
 }
 
@@ -2319,14 +2318,6 @@ func handleCreateEmail(config *Config) {
 // 智能创建邮箱
 func handleSmartCreateEmail(config *Config) {
 	printHeader("智能创建邮箱")
-
-	// 显示当前设置
-	fmt.Printf("  " + ColorBold + "当前设置" + ColorReset + "\n\n")
-	fmt.Printf("  "+ColorCyan+"自动选择:"+ColorReset+" %v\n", config.EmailQuality.AutoSelect)
-	fmt.Printf("  "+ColorCyan+"最低分数:"+ColorReset+" %d/100\n", config.EmailQuality.MinScore)
-	fmt.Printf("  "+ColorCyan+"最大尝试:"+ColorReset+" %d 次\n", config.EmailQuality.MaxRegenerateCount)
-	fmt.Printf("  "+ColorCyan+"显示详分:"+ColorReset+" %v\n", config.EmailQuality.ShowScores)
-	fmt.Println()
 
 	label := readInput("邮箱标签: ")
 	if label == "" {
@@ -2371,13 +2362,10 @@ func handleSmartCreateEmail(config *Config) {
 		printWarning(fmt.Sprintf("保存邮箱到文件失败: %v", err))
 	}
 
-	// 显示最终结果
+	// 显示最终结果（简洁模式）
 	fmt.Println()
-	fmt.Printf("  "+ColorBrightMagenta+"@ 邮箱: "+ColorReset+ColorBold+ColorBrightWhite+"%s"+ColorReset+"\n", finalEmail)
-	fmt.Printf("  "+ColorBrightBlue+"# 标签: "+ColorReset+ColorCyan+"%s"+ColorReset+"\n", label)
-	fmt.Printf("  "+ColorBrightGreen+"* 分数: "+ColorReset+ColorGreen+"%d"+ColorReset+"/100\n", result.BestScore)
-	fmt.Printf("  "+ColorBrightYellow+"~ 尝试: "+ColorReset+ColorYellow+"%d"+ColorReset+" 次\n", result.TotalTries)
-	fmt.Printf("  "+ColorBrightGreen+"& 时间: "+ColorReset+ColorGreen+"%s"+ColorReset+"\n", time.Now().Format("2006-01-02 15:04"))
+	fmt.Printf("  "+ColorBrightMagenta+"邮箱: "+ColorReset+ColorBold+"%s"+ColorReset+" "+ColorDim+"(分数: %d, 尝试: %d次)"+ColorReset+"\n",
+		finalEmail, result.BestScore, result.TotalTries)
 }
 
 // 程序设置
@@ -2410,9 +2398,6 @@ func handleProgramSettings(config *Config) {
 		default:
 			printError("无效选择，请输入 0-3")
 		}
-
-		fmt.Print("\n  " + ColorDim + "按回车键继续..." + ColorReset)
-		readInput("")
 	}
 }
 
@@ -2476,9 +2461,6 @@ func handleEmailQualitySettings(config *Config) {
 		default:
 			printError("无效选择，请输入 0-8")
 		}
-
-		fmt.Print("\n  " + ColorDim + "按回车键继续..." + ColorReset)
-		readInput("")
 	}
 }
 
@@ -2548,9 +2530,6 @@ func handleEmailSaveSettings(config *Config) {
 		default:
 			printError("无效选择，请输入 0-2")
 		}
-
-		fmt.Print("\n  " + ColorDim + "按回车键继续..." + ColorReset)
-		readInput("")
 	}
 }
 
@@ -2621,9 +2600,6 @@ func handleWeightSettings(config *Config) {
 		default:
 			printError("无效选择，请输入 0-5")
 		}
-
-		fmt.Print("\n  " + ColorDim + "按回车键继续..." + ColorReset)
-		readInput("")
 	}
 }
 
@@ -2679,7 +2655,7 @@ func handleDeleteEmails(config *Config) {
 		fmt.Println()
 	}
 
-	printInfo("输入序号 (逗号分隔，如: 1,3,5)")
+	printInfo("输入序号 (逗号分隔如 1,3,5 或输入 all 全选)")
 	input := readInput("序号: ")
 
 	if input == "" {
@@ -2687,17 +2663,22 @@ func handleDeleteEmails(config *Config) {
 		return
 	}
 
-	// 解析序号
-	parts := strings.Split(input, ",")
 	var toDeactivate []HMEEmail
 
-	for _, part := range parts {
-		idx, err := strconv.Atoi(strings.TrimSpace(part))
-		if err != nil || idx < 1 || idx > len(activeEmails) {
-			printError(fmt.Sprintf("无效的序号: %s", part))
-			return
+	// 支持全选
+	if strings.ToLower(strings.TrimSpace(input)) == "all" || strings.TrimSpace(input) == "*" {
+		toDeactivate = activeEmails
+	} else {
+		// 解析序号
+		parts := strings.Split(input, ",")
+		for _, part := range parts {
+			idx, err := strconv.Atoi(strings.TrimSpace(part))
+			if err != nil || idx < 1 || idx > len(activeEmails) {
+				printError(fmt.Sprintf("无效的序号: %s", part))
+				return
+			}
+			toDeactivate = append(toDeactivate, activeEmails[idx-1])
 		}
-		toDeactivate = append(toDeactivate, activeEmails[idx-1])
 	}
 
 	// 显示将要停用的邮箱
@@ -2846,7 +2827,7 @@ func handlePermanentDelete(config *Config) {
 		fmt.Println()
 	}
 
-	printInfo("输入序号 (逗号分隔，如: 1,3,5)")
+	printInfo("输入序号 (逗号分隔如 1,3,5 或输入 all 全选)")
 	input := readInput("序号: ")
 
 	if input == "" {
@@ -2854,17 +2835,22 @@ func handlePermanentDelete(config *Config) {
 		return
 	}
 
-	// 解析序号
-	parts := strings.Split(input, ",")
 	var toDelete []HMEEmail
 
-	for _, part := range parts {
-		idx, err := strconv.Atoi(strings.TrimSpace(part))
-		if err != nil || idx < 1 || idx > len(deactivatedEmails) {
-			printError(fmt.Sprintf("无效的序号: %s", part))
-			return
+	// 支持全选
+	if strings.ToLower(strings.TrimSpace(input)) == "all" || strings.TrimSpace(input) == "*" {
+		toDelete = deactivatedEmails
+	} else {
+		// 解析序号
+		parts := strings.Split(input, ",")
+		for _, part := range parts {
+			idx, err := strconv.Atoi(strings.TrimSpace(part))
+			if err != nil || idx < 1 || idx > len(deactivatedEmails) {
+				printError(fmt.Sprintf("无效的序号: %s", part))
+				return
+			}
+			toDelete = append(toDelete, deactivatedEmails[idx-1])
 		}
-		toDelete = append(toDelete, deactivatedEmails[idx-1])
 	}
 
 	// 显示将要删除的邮箱
@@ -2874,12 +2860,7 @@ func handlePermanentDelete(config *Config) {
 	}
 
 	printWarning("此操作不可恢复")
-	fmt.Print("\n  " + ColorYellow + "?" + ColorReset + " 确认删除? 请输入 " + ColorBold + "DELETE" + ColorReset + ": ")
-	reader := bufio.NewReader(os.Stdin)
-	confirm, _ := reader.ReadString('\n')
-	confirm = strings.TrimSpace(confirm)
-
-	if confirm != "DELETE" {
+	if !confirmAction("确认彻底删除这些邮箱") {
 		printInfo("已取消")
 		return
 	}
@@ -2955,7 +2936,7 @@ func handleReactivate(config *Config) {
 		fmt.Println()
 	}
 
-	printInfo("输入序号 (逗号分隔，如: 1,3,5)")
+	printInfo("输入序号 (逗号分隔如 1,3,5 或输入 all 全选)")
 	input := readInput("序号: ")
 
 	if input == "" {
@@ -2963,17 +2944,22 @@ func handleReactivate(config *Config) {
 		return
 	}
 
-	// 解析序号
-	parts := strings.Split(input, ",")
 	var toReactivate []HMEEmail
 
-	for _, part := range parts {
-		idx, err := strconv.Atoi(strings.TrimSpace(part))
-		if err != nil || idx < 1 || idx > len(deactivatedEmails) {
-			printError(fmt.Sprintf("无效的序号: %s", part))
-			return
+	// 支持全选
+	if strings.ToLower(strings.TrimSpace(input)) == "all" || strings.TrimSpace(input) == "*" {
+		toReactivate = deactivatedEmails
+	} else {
+		// 解析序号
+		parts := strings.Split(input, ",")
+		for _, part := range parts {
+			idx, err := strconv.Atoi(strings.TrimSpace(part))
+			if err != nil || idx < 1 || idx > len(deactivatedEmails) {
+				printError(fmt.Sprintf("无效的序号: %s", part))
+				return
+			}
+			toReactivate = append(toReactivate, deactivatedEmails[idx-1])
 		}
-		toReactivate = append(toReactivate, deactivatedEmails[idx-1])
 	}
 
 	// 显示将要重新激活的邮箱
@@ -3315,40 +3301,37 @@ func main() {
 		choice = strings.ToLower(strings.TrimSpace(choice))
 
 		switch choice {
-		case "1", "l", "list":
+		case "1":
 			handleListEmails(config)
-		case "2", "c", "create":
+		case "2":
 			handleCreateEmail(config)
-		case "3", "s", "smart":
+		case "3":
 			handleSmartCreateEmail(config)
-		case "4", "d", "deactivate":
+		case "4":
 			handleDeleteEmails(config)
-		case "5", "b", "batch":
+		case "5":
 			handleBatchCreate(config)
-		case "6", "delete":
+		case "6":
 			handlePermanentDelete(config)
-		case "7", "r", "reactivate":
+		case "7":
 			handleReactivate(config)
-		case "8", "settings":
+		case "8":
 			handleProgramSettings(config)
-		case "9", "test":
+		case "9":
 			if config.DeveloperMode {
 				testEmailScoring()
 			} else {
 				printError("无效选择，请输入 0-8")
 			}
-		case "0", "q", "quit", "exit", "e":
+		case "0":
 			fmt.Println()
 			printThickSeparator()
 			fmt.Printf("  感谢使用\n")
 			printThickSeparator()
 			return
 		default:
-			printError("无效选择，请输入 0-9 或对应字母")
+			printError("无效选择，请输入 0-8")
 		}
-
-		fmt.Print("\n  " + ColorDim + "按回车键继续..." + ColorReset)
-		readInput("")
 
 		// 清屏效果
 		fmt.Print("\033[2J\033[H")
