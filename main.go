@@ -43,6 +43,7 @@ import (
 	"sync"
 	"syscall"
 	"time"
+	"unsafe"
 
 	"github.com/fsnotify/fsnotify"
 )
@@ -2038,6 +2039,38 @@ func printStep(message string) {
 	fmt.Printf("  "+ColorDim+"..."+ColorReset+" %s\n", message)
 }
 
+// 获取终端宽度
+func getTerminalWidth() int {
+	type winsize struct {
+		Row    uint16
+		Col    uint16
+		Xpixel uint16
+		Ypixel uint16
+	}
+	ws := &winsize{}
+	retCode, _, _ := syscall.Syscall(syscall.SYS_IOCTL,
+		uintptr(syscall.Stdin),
+		uintptr(syscall.TIOCGWINSZ),
+		uintptr(unsafe.Pointer(ws)))
+
+	if int(retCode) == -1 {
+		return 80 // 默认宽度
+	}
+	return int(ws.Col)
+}
+
+// 格式化邮箱地址以适应指定宽度
+func formatEmailAddress(email string, maxWidth int) string {
+	if len(email) <= maxWidth {
+		return fmt.Sprintf("%-*s", maxWidth, email)
+	}
+	// 截断并添加省略号
+	if maxWidth <= 3 {
+		return strings.Repeat(".", maxWidth)
+	}
+	return email[:maxWidth-3] + "..."
+}
+
 func printProgressBar(current, total int, prefix string) {
 	barWidth := 40
 	if total <= 0 {
@@ -2260,6 +2293,32 @@ func handleListEmails(config *Config) {
 	fmt.Printf("  "+ColorBold+"总计"+ColorReset+" %d "+ColorDim+"|"+ColorReset+" "+ColorGreen+"激活"+ColorReset+" %d "+ColorDim+"|"+ColorReset+" "+ColorYellow+"停用"+ColorReset+" %d\n\n",
 		len(emails), activeCount, deactivatedCount)
 
+	// 计算动态列宽
+	termWidth := getTerminalWidth()
+	// 固定列宽度："  " + "99." + " " + "●" + " " + " " = 9字符
+	fixedWidth := 9
+	availableWidth := termWidth - fixedWidth
+
+	// 邮箱地址和标签的宽度分配
+	var emailWidth, labelWidth int
+	if availableWidth >= 60 {
+		// 终端足够宽：邮箱40字符，标签剩余
+		emailWidth = 40
+		labelWidth = availableWidth - emailWidth - 1 // -1 for space
+	} else if availableWidth >= 45 {
+		// 中等宽度：邮箱30字符，标签剩余
+		emailWidth = 30
+		labelWidth = availableWidth - emailWidth - 1
+	} else {
+		// 窄终端：邮箱占60%
+		emailWidth = int(float64(availableWidth) * 0.6)
+		labelWidth = availableWidth - emailWidth - 1
+		if emailWidth < 20 {
+			emailWidth = 20 // 最小20字符
+			labelWidth = availableWidth - emailWidth - 1
+		}
+	}
+
 	for i, email := range emails {
 		var statusSymbol, emailColor string
 		if email.IsActive {
@@ -2270,16 +2329,24 @@ func handleListEmails(config *Config) {
 			emailColor = ColorGray
 		}
 
-		// 紧凑显示模式：一行显示所有关键信息
+		// 格式化邮箱地址
+		formattedEmail := formatEmailAddress(email.HME, emailWidth)
+
+		// 格式化标签
 		labelText := email.Label
 		if labelText == "" {
-			labelText = ColorDim + "(无标签)" + ColorReset
-		} else {
-			labelText = ColorCyan + labelText + ColorReset
+			labelText = "(无标签)"
+		}
+		if len(labelText) > labelWidth && labelWidth > 3 {
+			labelText = labelText[:labelWidth-3] + "..."
+		}
+		labelDisplay := ColorCyan + labelText + ColorReset
+		if email.Label == "" {
+			labelDisplay = ColorDim + labelText + ColorReset
 		}
 
-		fmt.Printf("  "+ColorBrightCyan+"%2d."+ColorReset+" %s "+emailColor+"%-40s"+ColorReset+" %s\n",
-			i+1, statusSymbol, email.HME, labelText)
+		fmt.Printf("  "+ColorBrightCyan+"%2d."+ColorReset+" %s "+emailColor+"%s"+ColorReset+" %s\n",
+			i+1, statusSymbol, formattedEmail, labelDisplay)
 	}
 }
 
@@ -3295,7 +3362,14 @@ func main() {
 	startConfigWatcher()
 
 	// 主循环
+	firstIteration := true
 	for {
+		// 在显示菜单前清屏（第一次除外，以便用户看到启动信息）
+		if !firstIteration {
+			fmt.Print("\033[2J\033[H")
+		}
+		firstIteration = false
+
 		showMainMenu()
 		choice := readInput("选择操作 (0-9): ")
 		choice = strings.ToLower(strings.TrimSpace(choice))
@@ -3332,8 +3406,5 @@ func main() {
 		default:
 			printError("无效选择，请输入 0-8")
 		}
-
-		// 清屏效果
-		fmt.Print("\033[2J\033[H")
 	}
 }
